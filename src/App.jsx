@@ -426,6 +426,13 @@ export default function App() {
                                             </span>
                                         </div>
 
+                                        <div className="flex justify-between text-sm mb-1">
+                                            <span className="text-gray-500 dark:text-gray-400">Interest</span>
+                                            <span className="font-medium dark:text-gray-200">
+                                                {debt.interestRate ? `${debt.interestRate}%` : "0%"}
+                                            </span>
+                                        </div>
+
                                         <div className="flex justify-between text-sm">
                                             <span className="text-gray-500 dark:text-gray-400">Monthly</span>
                                             <span className="font-medium dark:text-gray-200">

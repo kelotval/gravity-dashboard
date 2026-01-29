@@ -111,7 +111,8 @@ export default function SettingsView({ profile, income, debts, onUpdateProfile, 
                                 currentBalance: 0,
                                 note: "",
                                 dueLabel: "Due Monthly",
-                                accent: "blue"
+                                accent: "blue",
+                                interestRate: 0,
                             };
                             onUpdateDebts([...debts, newDebt]);
                         }}
@@ -123,7 +124,7 @@ export default function SettingsView({ profile, income, debts, onUpdateProfile, 
                 <div className="space-y-4">
                     {debts.map((debt, index) => (
                         <div key={debt.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200 dark:bg-gray-700/50 dark:border-gray-600">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                                 <div className="md:col-span-2">
                                     <label className="text-xs text-gray-500 block mb-1 dark:text-gray-400">Debt Name</label>
                                     <input
@@ -133,6 +134,19 @@ export default function SettingsView({ profile, income, debts, onUpdateProfile, 
                                         onChange={(e) => {
                                             const updated = [...debts];
                                             updated[index].name = e.target.value;
+                                            onUpdateDebts(updated);
+                                        }}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-500 block mb-1 dark:text-gray-400">Rate (%)</label>
+                                    <input
+                                        type="number"
+                                        className="w-full bg-white px-2 py-1 border border-gray-300 rounded shadow-sm text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                        value={debt.interestRate || 0}
+                                        onChange={(e) => {
+                                            const updated = [...debts];
+                                            updated[index].interestRate = parseFloat(e.target.value) || 0;
                                             onUpdateDebts(updated);
                                         }}
                                     />

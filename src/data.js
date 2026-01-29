@@ -19,6 +19,7 @@ export const DEFAULT_STATE = {
             dueLabel: "Due Monthly",
             accent: "orange",
             originalBalance: 2500,
+            interestRate: 0,
         },
         {
             id: "kogan",
@@ -29,6 +30,7 @@ export const DEFAULT_STATE = {
             dueLabel: "Due Monthly",
             accent: "red",
             originalBalance: 2000,
+            interestRate: 9.99,
         },
         {
             id: "bankwest",
@@ -39,6 +41,7 @@ export const DEFAULT_STATE = {
             dueLabel: "Due Monthly",
             accent: "orange",
             originalBalance: 6000,
+            interestRate: 18.5,
         },
         {
             id: "kia",
@@ -49,6 +52,7 @@ export const DEFAULT_STATE = {
             dueLabel: "Due Monthly",
             accent: "blue",
             originalBalance: 38000,
+            interestRate: 7.49,
         },
     ],
     transactions: [
