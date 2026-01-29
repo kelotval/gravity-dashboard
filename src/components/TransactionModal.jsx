@@ -46,7 +46,7 @@ export default function TransactionModal({ isOpen, onClose, onSave, initialData 
         onClose();
     };
 
-    const categories = ["Housing", "Food", "Utilities", "Health", "Transport", "Personal", "Subscriptions", "Debt"];
+    const categories = ["Housing", "Food", "Utilities", "Health", "Transport", "Personal", "Subscriptions", "Debt", "Credit Card"];
     const isEditing = !!initialData;
 
     return (

@@ -191,6 +191,7 @@ export default function App() {
                         transactions={transactions}
                         onDelete={handleDeleteTransaction}
                         onEdit={handleEditClick}
+                        groupByCategory={true}
                     />
                 </div>
             );
