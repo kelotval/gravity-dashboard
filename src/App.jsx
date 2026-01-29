@@ -382,12 +382,12 @@ export default function App() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
                     {/* Row 1: Spending Intelligence (Full Width) */}
-                    <div className="lg:col-span-12 w-full h-[500px]">
+                    <div className="lg:col-span-12 w-full h-auto lg:h-[500px]">
                         <SpendingIntelligence transactions={transactions} />
                     </div>
 
                     {/* Row 2: Active Debts (Half Width) */}
-                    <div className="lg:col-span-6 w-full h-full">
+                    <div className="col-span-1 lg:col-span-6 w-full h-auto lg:h-full">
                         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-full dark:bg-gray-800 dark:border-gray-700 flex flex-col">
                             <div className="flex justify-between items-center mb-4">
                                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Active Debts</h3>
@@ -443,7 +443,7 @@ export default function App() {
                     </div>
 
                     {/* Row 2: Insights Card (Half Width) */}
-                    <div className="lg:col-span-6 w-full h-full">
+                    <div className="col-span-1 lg:col-span-6 w-full h-auto lg:h-full">
                         <InsightsCard
                             transactions={transactions}
                             income={income}

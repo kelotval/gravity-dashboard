@@ -82,7 +82,7 @@ export default function DashboardLayout({ children, currentTab, onTabChange }) {
             </aside>
 
             {/* Main Content Wrapper */}
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden overflow-y-auto">
                 {/* Top Header for Theme Toggle */}
                 <header className="flex justify-end items-center p-4 pr-16 lg:pr-8 bg-gray-50 dark:bg-gray-900 sticky top-0 z-50">
                     <button
@@ -95,7 +95,7 @@ export default function DashboardLayout({ children, currentTab, onTabChange }) {
                 </header>
 
                 {/* Main Content */}
-                <main className="flex-1 overflow-y-auto w-full bg-gray-50 dark:bg-gray-900">
+                <main className="flex-1 w-full bg-gray-50 dark:bg-gray-900">
                     <div className="container mx-auto px-6 py-8">
                         {children}
                     </div>

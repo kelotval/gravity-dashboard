@@ -54,7 +54,7 @@ export default function SpendingIntelligence({ transactions }) {
     }, [transactions]);
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden dark:bg-gray-800 dark:border-gray-700 h-full flex flex-col">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible lg:overflow-hidden dark:bg-gray-800 dark:border-gray-700 h-auto lg:h-full flex flex-col">
             <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
                 <div className="flex items-center gap-2">
                     <div className="p-2 bg-indigo-50 rounded-lg dark:bg-indigo-900/30">
@@ -70,7 +70,7 @@ export default function SpendingIntelligence({ transactions }) {
                 </button>
             </div>
 
-            <div className={`grid grid-cols-1 ${viewMode === 'full' ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} divide-y lg:divide-y-0 lg:divide-x divide-gray-100 dark:divide-gray-700 h-full transition-all duration-300`}>
+            <div className={`grid grid-cols-1 ${viewMode === 'full' ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} divide-y lg:divide-y-0 lg:divide-x divide-gray-100 dark:divide-gray-700 h-auto lg:h-full transition-all duration-300`}>
 
                 {/* COL 1: Category Trends */}
                 <div className="p-6 space-y-5">
