@@ -37,6 +37,7 @@ export default function App() {
     const [income, setIncome] = useState(stored?.income ?? DEFAULT_STATE.income);
     const [debts, setDebts] = useState(stored?.debts ?? DEFAULT_STATE.debts);
     const [profile, setProfile] = useState(stored?.profile ?? DEFAULT_STATE.profile);
+    const [saveStatus, setSaveStatus] = useState("Saved");
 
     useEffect(() => {
         const load = async () => {
@@ -60,9 +61,9 @@ export default function App() {
 
     useEffect(() => {
         const payload = { transactions, income, debts, profile };
-
-        // local fallback cache (fast refresh)
         saveStored(payload);
+
+        setSaveStatus("Saving...");
 
         const t = setTimeout(async () => {
             try {
@@ -71,13 +72,16 @@ export default function App() {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ state: payload }),
                 });
+                setSaveStatus("Saved");
             } catch (e) {
                 console.error("Failed to save cloud state", e);
+                setSaveStatus("Save failed");
             }
         }, 800);
 
         return () => clearTimeout(t);
     }, [transactions, income, debts, profile]);
+
 
 
 
@@ -197,23 +201,44 @@ export default function App() {
                             {profile.statusText || "Here's what's happening with your finances today."}
                         </p>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <div className="relative hidden md:block">
-                            <input
-                                type="text"
-                                placeholder="Search transactions..."
-                                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:placeholder-gray-500"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                            <svg className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+
+                    <div className="flex flex-col items-end gap-1">
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {saveStatus}
                         </div>
-                        <button
-                            onClick={handleNewClick}
-                            className="hidden md:flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                        >
-                            <Plus className="w-4 h-4 mr-2" /> Quick Add
-                        </button>
+
+                        <div className="flex items-center gap-3">
+                            <div className="relative hidden md:block">
+                                <input
+                                    type="text"
+                                    placeholder="Search transactions..."
+                                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:placeholder-gray-500"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                                <svg
+                                    className="w-5 h-5 text-gray-400 absolute left-3 top-2.5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth="2"
+                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                    ></path>
+                                </svg>
+                            </div>
+
+                            <button
+                                onClick={handleNewClick}
+                                className="hidden md:flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                            >
+                                <Plus className="w-4 h-4 mr-2" /> Quick Add
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -232,7 +257,7 @@ export default function App() {
                         value={`$${totalExpenses.toLocaleString()}`}
                         icon={TrendingDown}
                         color="orange"
-                        trend={totalExpenses > totalIncome ? "up" : "down"} // Simple logic
+                        trend={totalExpenses > totalIncome ? "up" : "down"}
                         trendValue="vs Income"
                     />
                     <MetricCard
@@ -271,6 +296,7 @@ export default function App() {
                                 View All
                             </button>
                         </div>
+
                         <TransactionList
                             transactions={transactions
                                 .filter(tx =>
@@ -294,28 +320,43 @@ export default function App() {
                                 Edit
                             </button>
                         </div>
+
                         <div className="space-y-4">
                             {debts.map(debt => (
-                                <div key={debt.id} className="p-4 rounded-lg bg-gray-50 border border-gray-100 dark:bg-gray-700/50 dark:border-gray-700">
+                                <div
+                                    key={debt.id}
+                                    className="p-4 rounded-lg bg-gray-50 border border-gray-100 dark:bg-gray-700/50 dark:border-gray-700"
+                                >
                                     <div className="flex justify-between items-start mb-2">
                                         <h4 className="font-semibold text-gray-900 dark:text-white">{debt.name}</h4>
-                                        <span className={`px-2 py-1 text-xs font-semibold rounded ${debt.accent === 'red' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' :
-                                            debt.accent === 'orange' ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' :
-                                                'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
-                                            }`}>
+                                        <span
+                                            className={`px-2 py-1 text-xs font-semibold rounded ${debt.accent === "red"
+                                                    ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                                                    : debt.accent === "orange"
+                                                        ? "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400"
+                                                        : "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+                                                }`}
+                                        >
                                             {debt.dueLabel}
                                         </span>
                                     </div>
+
                                     <div className="flex justify-between text-sm mb-1">
                                         <span className="text-gray-500 dark:text-gray-400">Balance</span>
-                                        <span className="font-medium dark:text-gray-200">${debt.currentBalance.toLocaleString()}</span>
+                                        <span className="font-medium dark:text-gray-200">
+                                            ${debt.currentBalance.toLocaleString()}
+                                        </span>
                                     </div>
+
                                     <div className="flex justify-between text-sm">
                                         <span className="text-gray-500 dark:text-gray-400">Monthly</span>
-                                        <span className="font-medium dark:text-gray-200">${debt.monthlyRepayment.toLocaleString()}</span>
+                                        <span className="font-medium dark:text-gray-200">
+                                            ${debt.monthlyRepayment.toLocaleString()}
+                                        </span>
                                     </div>
                                 </div>
                             ))}
+
                             {debts.length === 0 && (
                                 <p className="text-sm text-gray-500 text-center py-4">No active debts.</p>
                             )}
@@ -324,6 +365,7 @@ export default function App() {
                 </div>
             </>
         );
+
     };
 
     return (
