@@ -12,18 +12,24 @@ export const DEFAULT_STATE = {
     debts: [
         {
             id: "citibank",
-            name: "Citibank Credit Card",
+            name: "Citi Credit Card (MyCard)",
             monthlyRepayment: 1630,
             currentBalance: 1758,
-            note: "Interest Free ends 19/01/2026",
+            note: "Interest Free ended 19/01/2026",
             dueLabel: "Due Monthly",
             accent: "orange",
             originalBalance: 2500,
-            interestRate: 0,
+            interestRate: 22.24,
+            promoEndDate: "2026-01-19",
+            futureRates: [],
+            debtType: "Credit Card",
+            promoTemporary: false,
+            payoffPriorityHint: "Highest",
+            highCostDebtFlag: true // Seed override (engine calculates this too)
         },
         {
             id: "kogan",
-            name: "Kogan Credit Card",
+            name: "Kogan Money Black Card",
             monthlyRepayment: 1530,
             currentBalance: 1581,
             note: "9.99% Interest",
@@ -31,17 +37,26 @@ export const DEFAULT_STATE = {
             accent: "red",
             originalBalance: 2000,
             interestRate: 9.99,
+            debtType: "Credit Card",
+            promoTemporary: true,
+            futureRatePct: 21.99, // Pending user date entry
+            promoEndDate: null,
+            riskFlag: "Large Rate Jump"
         },
         {
             id: "bankwest",
-            name: "Bankwest Credit Card",
+            name: "Bankwest Personal Loan",
             monthlyRepayment: 110,
             currentBalance: 5434,
-            note: "Standard Variable Rate",
+            note: "Detailed Repayment",
             dueLabel: "Due Monthly",
             accent: "orange",
             originalBalance: 6000,
-            interestRate: 18.5,
+            interestRate: 12.5,
+            debtType: "Personal Loan",
+            promoTemporary: false,
+            fastPayoffMode: true,
+            strategyHint: "Lower priority due to aggressive repayment"
         },
         {
             id: "kia",
@@ -53,6 +68,7 @@ export const DEFAULT_STATE = {
             accent: "blue",
             originalBalance: 38000,
             interestRate: 7.49,
+            debtType: "Car Loan"
         },
     ],
     transactions: [

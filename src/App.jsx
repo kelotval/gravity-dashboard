@@ -12,6 +12,9 @@ import SettingsView from "./components/SettingsView";
 import ActiveLiabilities from "./components/ActiveLiabilities";
 import InsightsCard from "./components/InsightsCard";
 import SpendingIntelligence from "./components/SpendingIntelligence";
+import DebtRiskBanner from "./components/DebtRiskBanner";
+import InterestRiskPanel from "./components/InterestRiskPanel";
+import { calculateEffectiveRateState, getDebtRiskBanners, calculateInterestProjections } from "./utils/PayoffEngine";
 
 import { DEFAULT_STATE } from "./data";
 import { DollarSign, TrendingDown, PiggyBank, Wallet, Plus } from "lucide-react";
@@ -44,6 +47,12 @@ export default function App() {
     const [income, setIncome] = useState(stored?.income ?? DEFAULT_STATE.income);
     const [debts, setDebts] = useState(stored?.debts ?? DEFAULT_STATE.debts);
     const [profile, setProfile] = useState(stored?.profile ?? DEFAULT_STATE.profile);
+    const [advancedSettings, setAdvancedSettings] = useState(stored?.advancedSettings ?? {
+        alertSimulation: false,
+        interestCostSimulator: false,
+        payoffByDate: false,
+        aiInsights: false
+    });
     const [saveStatus, setSaveStatus] = useState("Saved");
     const [hasLoadedCloud, setHasLoadedCloud] = useState(false);
 
@@ -73,7 +82,7 @@ export default function App() {
     useEffect(() => {
         if (!hasLoadedCloud) return;
 
-        const payload = { transactions, income, debts, profile };
+        const payload = { transactions, income, debts, profile, advancedSettings };
         saveStored(payload);
 
         setSaveStatus("Saving...");
@@ -201,6 +210,8 @@ export default function App() {
                     onUpdateProfile={setProfile}
                     onUpdateIncome={setIncome}
                     onUpdateDebts={setDebts}
+                    advancedSettings={advancedSettings}
+                    onUpdateSettings={setAdvancedSettings}
                 />
             );
         }
@@ -209,7 +220,8 @@ export default function App() {
             return (
                 <ActiveLiabilities
                     debts={debts}
-                    onUpdateDebts={setDebts} // Pass setter to allow updates if implemented
+                    onUpdateDebts={setDebts}
+                    advancedSettings={advancedSettings}
                 />
             );
         }
@@ -218,6 +230,7 @@ export default function App() {
             return (
                 <PayoffPlanView
                     debts={debts}
+                    advancedSettings={advancedSettings}
                 />
             );
         }
@@ -371,6 +384,34 @@ export default function App() {
                     />
                 </div>
 
+                <DebtRiskBanner banners={getDebtRiskBanners(debts)} />
+
+                <InterestRiskPanel
+                    {...calculateInterestProjections(debts)}
+                />
+
+                {/* Simulated Notification Log */}
+                {advancedSettings.alertSimulation && (
+                    <div className="mb-8 p-4 bg-gray-900 rounded-xl text-white shadow-lg border border-gray-700">
+                        <h3 className="text-sm font-bold uppercase tracking-wider text-purple-400 mb-3 flex items-center">
+                            <span className="w-2 h-2 rounded-full bg-red-500 mr-2 animate-pulse"></span>
+                            Live Push Notification Log (Simulation)
+                        </h3>
+                        <div className="space-y-2 font-mono text-xs">
+                            {getDebtRiskBanners(debts).slice(0, 3).map(banner => (
+                                <div key={banner.id} className="flex gap-3 p-2 bg-gray-800 rounded border-l-4 border-purple-500">
+                                    <span className="text-gray-400">[{new Date().toLocaleTimeString()}]</span>
+                                    <span className="font-bold text-white">PUSH_SENT:</span>
+                                    <span className="text-gray-300">"{banner.alertType}: {banner.debtName}"</span>
+                                </div>
+                            ))}
+                            {getDebtRiskBanners(debts).length === 0 && (
+                                <div className="text-gray-500 italic">No active alerts to simulate.</div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {/* Charts Section */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                     <IncomeExpenseChart data={incomeExpenseData} />
@@ -427,9 +468,11 @@ export default function App() {
                                         </div>
 
                                         <div className="flex justify-between text-sm mb-1">
-                                            <span className="text-gray-500 dark:text-gray-400">Interest</span>
-                                            <span className="font-medium dark:text-gray-200">
-                                                {debt.interestRate ? `${debt.interestRate}%` : "0%"}
+                                            <span className="text-gray-500 dark:text-gray-400">
+                                                {calculateEffectiveRateState(debt).rateIsSwitched ? "Effective Rate" : "Interest"}
+                                            </span>
+                                            <span className={`font-medium dark:text-gray-200 ${calculateEffectiveRateState(debt).rateIsSwitched ? "text-orange-600 dark:text-orange-400 font-bold" : ""}`}>
+                                                {calculateEffectiveRateState(debt).effectiveRatePct}%
                                             </span>
                                         </div>
 

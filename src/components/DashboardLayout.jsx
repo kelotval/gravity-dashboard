@@ -31,11 +31,11 @@ export default function DashboardLayout({ children, currentTab, onTabChange }) {
 
     const navItems = [
         { id: "overview", icon: LayoutDashboard, label: "Overview" },
-        { id: "transactions", icon: CreditCard, label: "Transactions" },
         { id: "liabilities", icon: Wallet, label: "Active Liabilities" },
         { id: "payoff", icon: Calendar, label: "Payoff Plan" },
         { id: "trends", icon: LineChart, label: "Trends" },
         { id: "insights", icon: Sparkles, label: "Insights" },
+        { id: "transactions", icon: CreditCard, label: "Transactions" },
         { id: "settings", icon: Settings, label: "Settings" },
     ];
 

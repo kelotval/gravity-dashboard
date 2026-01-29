@@ -1,7 +1,7 @@
 import React from "react";
 import { Plus, Trash2, Smartphone, Home, DollarSign } from "lucide-react";
 
-export default function SettingsView({ profile, income, debts, onUpdateProfile, onUpdateIncome, onUpdateDebts }) {
+export default function SettingsView({ profile, income, debts, onUpdateProfile, onUpdateIncome, onUpdateDebts, advancedSettings, onUpdateSettings }) {
     const [localProfile, setLocalProfile] = React.useState(profile);
     const [localIncome, setLocalIncome] = React.useState(income);
 
@@ -164,6 +164,37 @@ export default function SettingsView({ profile, income, debts, onUpdateProfile, 
                                         }}
                                     />
                                 </div>
+                                <div className="col-span-full md:col-span-1 lg:col-span-2 grid grid-cols-2 gap-2 bg-gray-50 p-2 rounded border border-gray-100 dark:bg-gray-800 dark:border-gray-700">
+                                    <div>
+                                        <label className="text-xs text-gray-400 block mb-1">Future Date</label>
+                                        <input
+                                            type="date"
+                                            className="w-full bg-white px-2 py-1 border border-gray-300 rounded shadow-sm text-xs dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                            value={debt.futureRates?.[0]?.date || ""}
+                                            onChange={(e) => {
+                                                const updated = [...debts];
+                                                const newRate = parseFloat(debt.futureRates?.[0]?.rate || 0);
+                                                updated[index].futureRates = [{ date: e.target.value, rate: newRate }];
+                                                onUpdateDebts(updated);
+                                            }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-400 block mb-1">Future Rate %</label>
+                                        <input
+                                            type="number"
+                                            className="w-full bg-white px-2 py-1 border border-gray-300 rounded shadow-sm text-xs dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                            value={debt.futureRates?.[0]?.rate || ""}
+                                            placeholder="0%"
+                                            onChange={(e) => {
+                                                const updated = [...debts];
+                                                const newDate = debt.futureRates?.[0]?.date || "";
+                                                updated[index].futureRates = [{ date: newDate, rate: parseFloat(e.target.value) }];
+                                                onUpdateDebts(updated);
+                                            }}
+                                        />
+                                    </div>
+                                </div>
                                 <div>
                                     <label className="text-xs text-gray-500 block mb-1 dark:text-gray-400">Cur. Balance</label>
                                     <input
@@ -203,6 +234,87 @@ export default function SettingsView({ profile, income, debts, onUpdateProfile, 
                     ))}
                 </div>
             </section>
-        </div>
+
+            {/* Advanced Features Section */}
+            {
+                advancedSettings && (
+                    <section className="bg-gradient-to-r from-gray-900 to-gray-800 p-6 rounded-xl shadow-lg border border-gray-700 text-white">
+                        <h3 className="text-lg font-bold mb-6 flex items-center">
+                            <Smartphone className="w-5 h-5 mr-2 text-purple-400" /> Advanced Laboratory
+                        </h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Alert Simulation */}
+                            <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                                <div>
+                                    <h4 className="font-semibold text-gray-200">Push Alert Simulation</h4>
+                                    <p className="text-xs text-gray-400 mt-1">Show simulated push notifications in dashboard.</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={advancedSettings.alertSimulation}
+                                        onChange={(e) => onUpdateSettings({ ...advancedSettings, alertSimulation: e.target.checked })}
+                                    />
+                                    <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                                </label>
+                            </div>
+
+                            {/* Interest Cost Simulator */}
+                            <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                                <div>
+                                    <h4 className="font-semibold text-gray-200">What-if Simulator</h4>
+                                    <p className="text-xs text-gray-400 mt-1">Unlock "Interest Saver" modal in Payoff Plan.</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={advancedSettings.interestCostSimulator}
+                                        onChange={(e) => onUpdateSettings({ ...advancedSettings, interestCostSimulator: e.target.checked })}
+                                    />
+                                    <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                                </label>
+                            </div>
+
+                            {/* Payoff by Date */}
+                            <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                                <div>
+                                    <h4 className="font-semibold text-gray-200">Payoff Deadline Goals</h4>
+                                    <p className="text-xs text-gray-400 mt-1">Set target dates for specific debts.</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={advancedSettings.payoffByDate}
+                                        onChange={(e) => onUpdateSettings({ ...advancedSettings, payoffByDate: e.target.checked })}
+                                    />
+                                    <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                                </label>
+                            </div>
+
+                            {/* AI Insight Cards */}
+                            <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                                <div>
+                                    <h4 className="font-semibold text-gray-200">AI Insight Cards</h4>
+                                    <p className="text-xs text-gray-400 mt-1">Show smart explanations for recommendations.</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={advancedSettings.aiInsights}
+                                        onChange={(e) => onUpdateSettings({ ...advancedSettings, aiInsights: e.target.checked })}
+                                    />
+                                    <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </section>
+                )
+            }
+        </div >
     );
 }
