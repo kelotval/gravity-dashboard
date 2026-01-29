@@ -38,6 +38,7 @@ export default function App() {
     const [debts, setDebts] = useState(stored?.debts ?? DEFAULT_STATE.debts);
     const [profile, setProfile] = useState(stored?.profile ?? DEFAULT_STATE.profile);
     const [saveStatus, setSaveStatus] = useState("Saved");
+    const [hasLoadedCloud, setHasLoadedCloud] = useState(false);
 
     useEffect(() => {
         const load = async () => {
@@ -52,6 +53,8 @@ export default function App() {
                 }
             } catch (e) {
                 console.error("Failed to load cloud state", e);
+            } finally {
+                setHasLoadedCloud(true);
             }
         };
 
@@ -59,7 +62,10 @@ export default function App() {
     }, []);
 
 
+
     useEffect(() => {
+        if (!hasLoadedCloud) return;
+
         const payload = { transactions, income, debts, profile };
         saveStored(payload);
 
@@ -80,7 +86,8 @@ export default function App() {
         }, 800);
 
         return () => clearTimeout(t);
-    }, [transactions, income, debts, profile]);
+    }, [transactions, income, debts, profile, hasLoadedCloud]);
+
 
 
 
@@ -99,9 +106,9 @@ export default function App() {
     // 2. Event Handlers
     const handleSaveTransaction = (txData) => {
         if (editingTransaction) {
-            setTransactions(transactions.map(t => t.id === txData.id ? txData : t));
+            setTransactions(prev => prev.map(t => (t.id === txData.id ? txData : t)));
         } else {
-            setTransactions([txData, ...transactions]);
+            setTransactions(prev => [txData, ...prev]);
         }
         setIsModalOpen(false);
         setEditingTransaction(null);
@@ -119,7 +126,7 @@ export default function App() {
 
     const handleDeleteTransaction = (id) => {
         if (confirm("Are you sure you want to delete this transaction?")) {
-            setTransactions(transactions.filter(tx => tx.id !== id));
+            setTransactions(prev => prev.filter(tx => tx.id !== id));
         }
     };
 
@@ -331,10 +338,10 @@ export default function App() {
                                         <h4 className="font-semibold text-gray-900 dark:text-white">{debt.name}</h4>
                                         <span
                                             className={`px-2 py-1 text-xs font-semibold rounded ${debt.accent === "red"
-                                                    ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
-                                                    : debt.accent === "orange"
-                                                        ? "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400"
-                                                        : "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+                                                ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                                                : debt.accent === "orange"
+                                                    ? "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400"
+                                                    : "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
                                                 }`}
                                         >
                                             {debt.dueLabel}
