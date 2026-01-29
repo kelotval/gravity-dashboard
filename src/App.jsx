@@ -1,11 +1,18 @@
 import React, { useEffect, useState, useMemo } from "react";
 import DashboardLayout from "./components/DashboardLayout";
+import FinancialHealthBanner from "./components/FinancialHealthBanner";
 import MetricCard from "./components/MetricCard";
 import { IncomeExpenseChart, CategoryPieChart } from "./components/FinanceChart";
 import TransactionList from "./components/TransactionList";
 import TransactionModal from "./components/TransactionModal";
+import PayoffPlanView from "./components/PayoffPlanView";
+import TrendsView from "./components/TrendsView";
+import SmartInsightsView from "./components/SmartInsightsView";
 import SettingsView from "./components/SettingsView";
 import ActiveLiabilities from "./components/ActiveLiabilities";
+import InsightsCard from "./components/InsightsCard";
+import SpendingIntelligence from "./components/SpendingIntelligence";
+
 import { DEFAULT_STATE } from "./data";
 import { DollarSign, TrendingDown, PiggyBank, Wallet, Plus } from "lucide-react";
 
@@ -103,6 +110,21 @@ export default function App() {
     const netSavings = totalIncome - totalExpenses;
     const savingsRate = totalIncome > 0 ? ((netSavings / totalIncome) * 100).toFixed(1) : "0.0";
 
+    // Financial Health Calculations
+    const totalDebtBalance = debts.reduce((acc, d) => acc + d.currentBalance, 0);
+    const totalMonthlyDebt = debts.reduce((acc, d) => acc + d.monthlyRepayment, 0);
+    const dtiRatio = totalIncome > 0 ? ((totalMonthlyDebt / totalIncome) * 100).toFixed(1) : "0.0";
+    const netWorth = (profile.assets || 0) - totalDebtBalance;
+
+    // Simple health score algorithm
+    const calcHealthScore = () => {
+        let score = 50;
+        score += parseFloat(savingsRate) * 1.5; // Savings boost score
+        score -= parseFloat(dtiRatio) * 0.5;    // Debt drags score
+        return Math.min(100, Math.max(0, Math.round(score)));
+    };
+    const healthScore = calcHealthScore();
+
     // 2. Event Handlers
     const handleSaveTransaction = (txData) => {
         if (editingTransaction) {
@@ -122,6 +144,25 @@ export default function App() {
     const handleNewClick = () => {
         setEditingTransaction(null);
         setIsModalOpen(true);
+    };
+
+    // Insight Actions
+    const [actionFeedback, setActionFeedback] = useState(null);
+
+    const handleInsightAction = (action) => {
+        if (!action) return;
+
+        if (action.type === 'NAVIGATE') {
+            setCurrentTab(action.target);
+            setActionFeedback(`Navigated to ${action.label}`);
+        } else if (action.type === 'FILTER') {
+            setSearchQuery(action.payload);
+            setCurrentTab('transactions'); // Ensure we are on the view to see the filter
+            setActionFeedback(`Applied filter: ${action.payload}`);
+        }
+
+        // Clear feedback after 3s
+        setTimeout(() => setActionFeedback(null), 3000);
     };
 
     const handleDeleteTransaction = (id) => {
@@ -173,6 +214,34 @@ export default function App() {
             );
         }
 
+        if (currentTab === "payoff") {
+            return (
+                <PayoffPlanView
+                    debts={debts}
+                />
+            );
+        }
+
+        if (currentTab === "trends") {
+            return (
+                <TrendsView
+                    currentIncome={totalIncome}
+                    currentExpenses={totalExpenses}
+                    currentDebt={totalDebtBalance}
+                />
+            );
+        }
+
+        if (currentTab === "insights") {
+            return (
+                <SmartInsightsView
+                    transactions={transactions}
+                    income={income}
+                    debts={debts}
+                />
+            );
+        }
+
         if (currentTab === "transactions") {
             return (
                 <div>
@@ -200,7 +269,14 @@ export default function App() {
         // Default: Overview
         return (
             <>
-                <div className="flex justify-between items-end mb-8">
+                <div className="flex justify-between items-end mb-8 relative">
+                    {/* Action Feedback Toast */}
+                    {actionFeedback && (
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-12 bg-gray-900 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg animate-fade-in-down z-50 dark:bg-white dark:text-gray-900">
+                            {actionFeedback}
+                        </div>
+                    )}
+
                     <div>
                         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                             Welcome back, {profile.householdName}
@@ -250,6 +326,15 @@ export default function App() {
                     </div>
                 </div>
 
+                <div className="mb-8">
+                    <FinancialHealthBanner
+                        score={healthScore}
+                        savingsRate={savingsRate}
+                        dtiRatio={dtiRatio}
+                        netWorth={netWorth}
+                    />
+                </div>
+
                 {/* Key Metrics Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                     <MetricCard
@@ -293,82 +378,79 @@ export default function App() {
                 </div>
 
                 {/* Recent Transactions Preview */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Recent Activity</h3>
-                            <button
-                                onClick={() => setCurrentTab("transactions")}
-                                className="text-sm text-blue-600 hover:text-blue-700 font-medium dark:text-blue-400 dark:hover:text-blue-300"
-                            >
-                                View All
-                            </button>
-                        </div>
+                {/* Bottom Section: Strict 12-Column Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-                        <TransactionList
-                            transactions={transactions
-                                .filter(tx =>
-                                    tx.item.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                    tx.category.toLowerCase().includes(searchQuery.toLowerCase())
-                                )
-                                .slice(0, 5)}
-                            onDelete={handleDeleteTransaction}
-                            onEdit={handleEditClick}
-                        />
+                    {/* Row 1: Spending Intelligence (Full Width) */}
+                    <div className="lg:col-span-12 w-full h-[500px]">
+                        <SpendingIntelligence transactions={transactions} />
                     </div>
 
-                    {/* Debt Summary */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-fit dark:bg-gray-800 dark:border-gray-700">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Active Debts</h3>
-                            <button
-                                onClick={() => setCurrentTab("settings")}
-                                className="text-xs font-medium text-blue-600 dark:text-blue-400"
-                            >
-                                Edit
-                            </button>
-                        </div>
-
-                        <div className="space-y-4">
-                            {debts.map(debt => (
-                                <div
-                                    key={debt.id}
-                                    className="p-4 rounded-lg bg-gray-50 border border-gray-100 dark:bg-gray-700/50 dark:border-gray-700"
+                    {/* Row 2: Active Debts (Half Width) */}
+                    <div className="lg:col-span-6 w-full h-full">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-full dark:bg-gray-800 dark:border-gray-700 flex flex-col">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Active Debts</h3>
+                                <button
+                                    onClick={() => setCurrentTab("settings")}
+                                    className="text-xs font-medium text-blue-600 dark:text-blue-400"
                                 >
-                                    <div className="flex justify-between items-start mb-2">
-                                        <h4 className="font-semibold text-gray-900 dark:text-white">{debt.name}</h4>
-                                        <span
-                                            className={`px-2 py-1 text-xs font-semibold rounded ${debt.accent === "red"
-                                                ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
-                                                : debt.accent === "orange"
-                                                    ? "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400"
-                                                    : "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
-                                                }`}
-                                        >
-                                            {debt.dueLabel}
-                                        </span>
-                                    </div>
+                                    Edit
+                                </button>
+                            </div>
 
-                                    <div className="flex justify-between text-sm mb-1">
-                                        <span className="text-gray-500 dark:text-gray-400">Balance</span>
-                                        <span className="font-medium dark:text-gray-200">
-                                            ${debt.currentBalance.toLocaleString()}
-                                        </span>
-                                    </div>
+                            <div className="space-y-4 flex-1">
+                                {debts.map(debt => (
+                                    <div
+                                        key={debt.id}
+                                        className="p-4 rounded-lg bg-gray-50 border border-gray-100 dark:bg-gray-700/50 dark:border-gray-700"
+                                    >
+                                        <div className="flex justify-between items-start mb-2">
+                                            <h4 className="font-semibold text-gray-900 dark:text-white">{debt.name}</h4>
+                                            <span
+                                                className={`px-2 py-1 text-xs font-semibold rounded ${debt.accent === "red"
+                                                    ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                                                    : debt.accent === "orange"
+                                                        ? "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400"
+                                                        : "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+                                                    }`}
+                                            >
+                                                {debt.dueLabel}
+                                            </span>
+                                        </div>
 
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-gray-500 dark:text-gray-400">Monthly</span>
-                                        <span className="font-medium dark:text-gray-200">
-                                            ${debt.monthlyRepayment.toLocaleString()}
-                                        </span>
-                                    </div>
-                                </div>
-                            ))}
+                                        <div className="flex justify-between text-sm mb-1">
+                                            <span className="text-gray-500 dark:text-gray-400">Balance</span>
+                                            <span className="font-medium dark:text-gray-200">
+                                                ${debt.currentBalance.toLocaleString()}
+                                            </span>
+                                        </div>
 
-                            {debts.length === 0 && (
-                                <p className="text-sm text-gray-500 text-center py-4">No active debts.</p>
-                            )}
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-gray-500 dark:text-gray-400">Monthly</span>
+                                            <span className="font-medium dark:text-gray-200">
+                                                ${debt.monthlyRepayment.toLocaleString()}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {debts.length === 0 && (
+                                    <p className="text-sm text-gray-500 text-center py-4">No active debts.</p>
+                                )}
+                            </div>
                         </div>
+                    </div>
+
+                    {/* Row 2: Insights Card (Half Width) */}
+                    <div className="lg:col-span-6 w-full h-full">
+                        <InsightsCard
+                            transactions={transactions}
+                            income={income}
+                            debts={debts}
+                            savingsRate={savingsRate}
+                            onAction={handleInsightAction}
+                        />
                     </div>
                 </div>
             </>

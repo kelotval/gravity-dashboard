@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import clsx from "clsx";
-import { ArrowUpRight, ArrowDownRight, Coffee, Home, Zap, Heart, Smartphone, Scissors, Monitor, Trash2, Pencil, CreditCard } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Coffee, Home, Zap, Heart, Smartphone, Scissors, Monitor, Trash2, Pencil, CreditCard, Search, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const CATEGORY_ICONS = {
     Housing: Home,
@@ -26,113 +27,228 @@ const CATEGORY_COLORS = {
     "Credit Card": "bg-indigo-100 text-indigo-600",
 };
 
-export default function TransactionList({ transactions, onDelete, onEdit, groupByCategory = false }) {
+export default function TransactionList({ transactions, onDelete, onEdit, groupByCategory = false, title = "Recent Transactions", hideSearch = false, headerAction = null }) {
+    const [searchTerm, setSearchTerm] = useState("");
+
+    const filteredTransactions = transactions.filter(tx =>
+        tx.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        tx.category.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const clearSearch = () => setSearchTerm("");
+
+    const SearchBar = () => (
+        <div className="relative mb-6 group">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
+            </div>
+            <input
+                type="text"
+                className="block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl leading-5 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:placeholder-gray-500"
+                placeholder="Search transactions..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            {searchTerm && (
+                <button
+                    onClick={clearSearch}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                >
+                    <X className="h-5 w-5" />
+                </button>
+            )}
+        </div>
+    );
+
     if (groupByCategory) {
-        const grouped = transactions.reduce((acc, tx) => {
+        // ... (Keep existing groupByCategory logic mostly same, but maybe ignore widget props for now as it's full page)
+        const grouped = filteredTransactions.reduce((acc, tx) => {
             if (!acc[tx.category]) acc[tx.category] = [];
             acc[tx.category].push(tx);
             return acc;
         }, {});
 
-        // Sort categories by some logic? Maybe just Object.keys or specific order.
-        // Let's use the order from CATEGORY_ICONS keys if possible, or just alphabetical.
-        // But the user might want to see mostly used ones. Let's just iterate object entries.
+        const isEmpty = filteredTransactions.length === 0;
 
         return (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {Object.entries(grouped).map(([category, txs]) => {
-                    const Icon = CATEGORY_ICONS[category] || ArrowDownRight;
-                    const totalAmount = txs.reduce((sum, t) => sum + t.amount, 0);
+            <div>
+                {!hideSearch && <SearchBar />}
 
-                    return (
-                        <div key={category} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden dark:bg-gray-800 dark:border-gray-700 flex flex-col h-full">
-                            <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-700/30">
-                                <div className="flex items-center gap-3">
-                                    <div className={clsx("p-2 rounded-lg", CATEGORY_COLORS[category] || "bg-gray-100 text-gray-600")}>
-                                        <Icon className="w-5 h-5" />
-                                    </div>
-                                    <h3 className="font-bold text-gray-900 dark:text-white">{category}</h3>
-                                </div>
-                                <span className="font-semibold text-gray-900 dark:text-white">${totalAmount.toLocaleString()}</span>
-                            </div>
-                            <div className="divide-y divide-gray-100 dark:divide-gray-700 flex-1">
-                                {txs.map(tx => (
-                                    <div key={tx.id} className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors flex items-center justify-between group text-sm">
-                                        <div className="flex-1 min-w-0 pr-4">
-                                            <p className="font-medium text-gray-900 truncate dark:text-white">{tx.item}</p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">{new Date().toLocaleDateString()} {/* Placeholder date if not in data */}</p>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-medium text-gray-900 dark:text-gray-200">${tx.amount.toLocaleString()}</span>
-                                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                {onEdit && (
-                                                    <button onClick={() => onEdit(tx)} className="p-1 text-gray-400 hover:text-blue-500 rounded">
-                                                        <Pencil className="w-3.5 h-3.5" />
-                                                    </button>
-                                                )}
-                                                {onDelete && (
-                                                    <button onClick={() => onDelete(tx.id)} className="p-1 text-gray-400 hover:text-red-500 rounded">
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                    </button>
-                                                )}
+                {isEmpty && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="text-center py-12 text-gray-500 dark:text-gray-400"
+                    >
+                        No transactions found matching "{searchTerm}"
+                    </motion.div>
+                )}
+                {/* ... Rest of grouped view ... */}
+                <motion.div layout className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <AnimatePresence>
+                        {Object.entries(grouped).map(([category, txs]) => {
+                            const Icon = CATEGORY_ICONS[category] || ArrowDownRight;
+                            const totalAmount = txs.reduce((sum, t) => sum + t.amount, 0);
+
+                            return (
+                                <motion.div
+                                    layout
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    key={category}
+                                    className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden dark:bg-gray-800 dark:border-gray-700 flex flex-col h-full"
+                                >
+                                    <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-700/30">
+                                        <div className="flex items-center gap-3">
+                                            <div className={clsx("p-2 rounded-lg", CATEGORY_COLORS[category] || "bg-gray-100 text-gray-600")}>
+                                                <Icon className="w-5 h-5" />
                                             </div>
+                                            <h3 className="font-bold text-gray-900 dark:text-white">{category}</h3>
                                         </div>
+                                        <span className="font-semibold text-gray-900 dark:text-white">${totalAmount.toLocaleString()}</span>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-                    );
-                })}
+                                    <div className="divide-y divide-gray-100 dark:divide-gray-700 flex-1">
+                                        <AnimatePresence>
+                                            {txs.map(tx => (
+                                                <motion.div
+                                                    layout
+                                                    initial={{ opacity: 0, x: -20 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    exit={{ opacity: 0, x: 20 }}
+                                                    key={tx.id}
+                                                    className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors flex items-center justify-between group text-sm"
+                                                >
+                                                    <div className="flex-1 min-w-0 pr-4">
+                                                        <p className="font-medium text-gray-900 truncate dark:text-white">{tx.item}</p>
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400">{new Date().toLocaleDateString()}</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-medium text-gray-900 dark:text-gray-200">${tx.amount.toLocaleString()}</span>
+                                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            {onEdit && (
+                                                                <button onClick={() => onEdit(tx)} className="p-1 text-gray-400 hover:text-blue-500 rounded">
+                                                                    <Pencil className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            )}
+                                                            {onDelete && (
+                                                                <button onClick={() => onDelete(tx.id)} className="p-1 text-gray-400 hover:text-red-500 rounded">
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </motion.div>
+                                            ))}
+                                        </AnimatePresence>
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
+                    </AnimatePresence>
+                </motion.div>
             </div>
         );
     }
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden dark:bg-gray-800 dark:border-gray-700">
-            <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Recent Transactions</h3>
-                <span className="text-sm text-gray-500 dark:text-gray-400">{transactions.length} items</span>
-            </div>
-            <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                {transactions.map((tx) => {
-                    const Icon = CATEGORY_ICONS[tx.category] || ArrowDownRight;
-                    const colorClass = CATEGORY_COLORS[tx.category] || "bg-gray-100 text-gray-600";
-
-                    return (
-                        <div key={tx.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center justify-between group">
-                            <div className="flex items-center space-x-4">
-                                <div className={clsx("p-2 rounded-full", colorClass)}>
-                                    <Icon className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <p className="font-medium text-gray-900 dark:text-white">{tx.item}</p>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">{tx.category}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                {onEdit && (
-                                    <button
-                                        onClick={() => onEdit(tx)}
-                                        className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-                                        title="Edit Transaction"
-                                    >
-                                        <Pencil className="w-4 h-4" />
-                                    </button>
-                                )}
-                                {onDelete && (
-                                    <button
-                                        onClick={() => onDelete(tx.id)}
-                                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-                                        title="Delete Transaction"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                )}
-                            </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden dark:bg-gray-800 dark:border-gray-700 h-full flex flex-col">
+            <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex-1 flex justify-between items-center sm:block">
+                    <div className="flex justify-between items-center w-full">
+                        <div>
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">{title}</h3>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">{filteredTransactions.length} items</span>
                         </div>
-                    );
-                })}
+                        {headerAction && <div className="ml-4">{headerAction}</div>}
+                    </div>
+                </div>
+
+                {/* Embedded Search for List View */}
+                {!hideSearch && (
+                    <div className="relative w-full sm:w-64">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Search className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <input
+                            type="text"
+                            className="block w-full pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all dark:bg-gray-900 dark:border-gray-600 dark:text-white"
+                            placeholder="Search..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                        {searchTerm && (
+                            <button
+                                onClick={clearSearch}
+                                className="absolute inset-y-0 right-0 pr-2 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
+
+            <motion.div layout className="divide-y divide-gray-100 dark:divide-gray-700">
+                <AnimatePresence>
+                    {filteredTransactions.map((tx) => {
+                        const Icon = CATEGORY_ICONS[tx.category] || ArrowDownRight;
+                        const colorClass = CATEGORY_COLORS[tx.category] || "bg-gray-100 text-gray-600";
+
+                        return (
+                            <motion.div
+                                layout
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, height: 0, padding: 0 }}
+                                key={tx.id}
+                                className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center justify-between group"
+                            >
+                                <div className="flex items-center space-x-4">
+                                    <motion.div
+                                        whileHover={{ scale: 1.1, rotate: 5 }}
+                                        className={clsx("p-2 rounded-full", colorClass)}
+                                    >
+                                        <Icon className="w-5 h-5" />
+                                    </motion.div>
+                                    <div>
+                                        <p className="font-medium text-gray-900 dark:text-white">{tx.item}</p>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">{tx.category}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className="font-semibold text-gray-900 dark:text-white">${tx.amount.toLocaleString()}</span>
+                                    <div className="flex items-center gap-1">
+                                        {onEdit && (
+                                            <button
+                                                onClick={() => onEdit(tx)}
+                                                className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all dark:hover:bg-blue-900/30"
+                                                title="Edit Transaction"
+                                            >
+                                                <Pencil className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                        {onDelete && (
+                                            <button
+                                                onClick={() => onDelete(tx.id)}
+                                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all dark:hover:bg-red-900/30"
+                                                title="Delete Transaction"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </motion.div>
+                        );
+                    })}
+                </AnimatePresence>
+                {filteredTransactions.length === 0 && (
+                    <div className="p-12 text-center text-gray-500 dark:text-gray-400">
+                        No transactions found
+                    </div>
+                )}
+            </motion.div>
         </div>
     );
 }

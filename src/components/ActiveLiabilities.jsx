@@ -1,5 +1,6 @@
 import React from "react";
 import { Wallet, Car, AlertCircle, TrendingUp } from "lucide-react";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import kiaImage from "../assets/kia_sportage.png";
 
 export default function ActiveLiabilities({ debts, onUpdateDebts }) {
@@ -40,50 +41,76 @@ export default function ActiveLiabilities({ debts, onUpdateDebts }) {
             {/* Debt Cards Grid */}
             <h3 className="text-xl font-bold text-gray-900 dark:text-white">Credit Cards & Loans</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {debts.map((debt) => (
-                    <div key={debt.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col dark:bg-gray-800 dark:border-gray-700">
-                        <div className={`h-2 w-full ${debt.accent === 'red' ? 'bg-red-500' :
-                            debt.accent === 'orange' ? 'bg-orange-500' : 'bg-blue-500'
-                            }`} />
-                        <div className="p-6 flex-1 flex flex-col">
-                            <div className="flex justify-between items-start mb-4">
-                                <h4 className="font-bold text-lg text-gray-900 dark:text-white">{debt.name}</h4>
-                                <span className="text-xs font-semibold bg-gray-100 text-gray-600 px-2 py-1 rounded dark:bg-gray-700 dark:text-gray-300">
-                                    {debt.dueLabel}
-                                </span>
-                            </div>
+                {debts.map((debt) => {
+                    // Generate chart data
+                    const chartData = [
+                        { name: "Start", value: debt.originalBalance || debt.currentBalance * 1.5 },
+                        { name: "Now", value: debt.currentBalance },
+                        { name: "Zero", value: 0 },
+                    ];
 
-                            <div className="space-y-4 flex-1">
-                                <div>
-                                    <div className="flex justify-between text-sm mb-1">
+                    const color = debt.accent === 'red' ? '#ef4444' : debt.accent === 'orange' ? '#f97316' : '#3b82f6';
+                    const gradientId = `color-${debt.id}`;
+
+                    return (
+                        <div key={debt.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col dark:bg-gray-800 dark:border-gray-700">
+                            <div className={`h-1 w-full ${debt.accent === 'red' ? 'bg-red-500' :
+                                debt.accent === 'orange' ? 'bg-orange-500' : 'bg-blue-500'
+                                }`} />
+                            <div className="p-6 flex-1 flex flex-col">
+                                <div className="flex justify-between items-start mb-4">
+                                    <h4 className="font-bold text-lg text-gray-900 dark:text-white">{debt.name}</h4>
+                                    <span className="text-xs font-semibold bg-gray-100 text-gray-600 px-2 py-1 rounded dark:bg-gray-700 dark:text-gray-300">
+                                        {debt.dueLabel}
+                                    </span>
+                                </div>
+
+                                <div className="space-y-4 flex-1">
+                                    <div className="h-32 -mx-4">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <AreaChart data={chartData}>
+                                                <defs>
+                                                    <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="5%" stopColor={color} stopOpacity={0.8} />
+                                                        <stop offset="95%" stopColor={color} stopOpacity={0} />
+                                                    </linearGradient>
+                                                </defs>
+                                                <Tooltip
+                                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                                    formatter={(value) => [`$${value.toLocaleString()}`, 'Balance']}
+                                                />
+                                                <Area
+                                                    type="monotone"
+                                                    dataKey="value"
+                                                    stroke={color}
+                                                    fillOpacity={1}
+                                                    fill={`url(#${gradientId})`}
+                                                    strokeWidth={2}
+                                                />
+                                            </AreaChart>
+                                        </ResponsiveContainer>
+                                    </div>
+
+                                    <div className="flex justify-between text-sm mb-1 mt-2">
                                         <span className="text-gray-500 dark:text-gray-400">Current Balance</span>
                                         <span className="font-semibold text-gray-900 dark:text-white">${debt.currentBalance.toLocaleString()}</span>
                                     </div>
-                                    {/* Simulated Progress Bar (Assuming somewhat arbitrary limits for visual effect if unknown) */}
-                                    <div className="w-full bg-gray-100 rounded-full h-2 dark:bg-gray-700">
-                                        <div
-                                            className={`h-2 rounded-full ${debt.accent === 'red' ? 'bg-red-500' :
-                                                debt.accent === 'orange' ? 'bg-orange-500' : 'bg-blue-500'
-                                                }`}
-                                            style={{ width: '60%' }} // Static for now as visual flair
-                                        />
+
+                                    <div className="bg-gray-50 p-3 rounded-lg flex justify-between items-center dark:bg-gray-700/50">
+                                        <span className="text-sm text-gray-600 dark:text-gray-400">Monthly Repayment</span>
+                                        <span className="font-bold text-gray-900 dark:text-white">${debt.monthlyRepayment.toLocaleString()}</span>
                                     </div>
-                                </div>
 
-                                <div className="bg-gray-50 p-3 rounded-lg flex justify-between items-center dark:bg-gray-700/50">
-                                    <span className="text-sm text-gray-600 dark:text-gray-400">Monthly Repayment</span>
-                                    <span className="font-bold text-gray-900 dark:text-white">${debt.monthlyRepayment.toLocaleString()}</span>
+                                    {debt.note && (
+                                        <p className="text-xs text-gray-400 italic border-t pt-3 border-gray-100">
+                                            {debt.note}
+                                        </p>
+                                    )}
                                 </div>
-
-                                {debt.note && (
-                                    <p className="text-xs text-gray-400 italic border-t pt-3 border-gray-100">
-                                        {debt.note}
-                                    </p>
-                                )}
                             </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
             {/* Vehicle Section */}

@@ -2,6 +2,7 @@ export const DEFAULT_STATE = {
     profile: {
         householdName: "Eric & Rebecca",
         statusText: "On Track",
+        assets: 125000,
     },
     income: {
         salaryEric: 8524,
@@ -17,6 +18,7 @@ export const DEFAULT_STATE = {
             note: "Interest Free ends 19/01/2026",
             dueLabel: "Due Monthly",
             accent: "orange",
+            originalBalance: 2500,
         },
         {
             id: "kogan",
@@ -26,6 +28,7 @@ export const DEFAULT_STATE = {
             note: "9.99% Interest",
             dueLabel: "Due Monthly",
             accent: "red",
+            originalBalance: 2000,
         },
         {
             id: "bankwest",
@@ -35,6 +38,7 @@ export const DEFAULT_STATE = {
             note: "Standard Variable Rate",
             dueLabel: "Due Monthly",
             accent: "orange",
+            originalBalance: 6000,
         },
         {
             id: "kia",
@@ -44,6 +48,7 @@ export const DEFAULT_STATE = {
             note: "Loan Active",
             dueLabel: "Due Monthly",
             accent: "blue",
+            originalBalance: 38000,
         },
     ],
     transactions: [

@@ -28,7 +28,7 @@ export default function SettingsView({ profile, income, debts, onUpdateProfile, 
                 <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center dark:text-white">
                     <Home className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" /> Household Profile
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Household Name</label>
                         <input
@@ -45,6 +45,15 @@ export default function SettingsView({ profile, income, debts, onUpdateProfile, 
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                             value={localProfile.statusText}
                             onChange={(e) => handleProfileChange("statusText", e.target.value)}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Total Assets ($)</label>
+                        <input
+                            type="number"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            value={localProfile.assets || 0}
+                            onChange={(e) => handleProfileChange("assets", parseFloat(e.target.value) || 0)}
                         />
                     </div>
                 </div>
@@ -114,7 +123,7 @@ export default function SettingsView({ profile, income, debts, onUpdateProfile, 
                 <div className="space-y-4">
                     {debts.map((debt, index) => (
                         <div key={debt.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200 dark:bg-gray-700/50 dark:border-gray-600">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                                 <div className="md:col-span-2">
                                     <label className="text-xs text-gray-500 block mb-1 dark:text-gray-400">Debt Name</label>
                                     <input
@@ -129,7 +138,20 @@ export default function SettingsView({ profile, income, debts, onUpdateProfile, 
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-xs text-gray-500 block mb-1 dark:text-gray-400">Balance</label>
+                                    <label className="text-xs text-gray-500 block mb-1 dark:text-gray-400">Orig. Balance</label>
+                                    <input
+                                        type="number"
+                                        className="w-full bg-white px-2 py-1 border border-gray-300 rounded shadow-sm text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                        value={debt.originalBalance || (debt.currentBalance * 1.2)} // Default for display
+                                        onChange={(e) => {
+                                            const updated = [...debts];
+                                            updated[index].originalBalance = parseFloat(e.target.value) || 0;
+                                            onUpdateDebts(updated);
+                                        }}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-500 block mb-1 dark:text-gray-400">Cur. Balance</label>
                                     <input
                                         type="number"
                                         className="w-full bg-white px-2 py-1 border border-gray-300 rounded shadow-sm text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
@@ -143,7 +165,7 @@ export default function SettingsView({ profile, income, debts, onUpdateProfile, 
                                 </div>
                                 <div className="flex items-end gap-2">
                                     <div className="flex-1">
-                                        <label className="text-xs text-gray-500 block mb-1 dark:text-gray-400">Monthly Repayment</label>
+                                        <label className="text-xs text-gray-500 block mb-1 dark:text-gray-400">Monthly</label>
                                         <input
                                             type="number"
                                             className="w-full bg-white px-2 py-1 border border-gray-300 rounded shadow-sm text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
