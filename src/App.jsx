@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import DashboardLayout from "./components/DashboardLayout";
 import MetricCard from "./components/MetricCard";
 import { IncomeExpenseChart, CategoryPieChart } from "./components/FinanceChart";
@@ -9,11 +9,38 @@ import ActiveLiabilities from "./components/ActiveLiabilities";
 import { DEFAULT_STATE } from "./data";
 import { DollarSign, TrendingDown, PiggyBank, Wallet, Plus } from "lucide-react";
 
+const STORAGE_KEY = "er_finance_state_v1";
+
+function loadStored() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw);
+    } catch (e) {
+        console.error("Failed to load stored state", e);
+        return null;
+    }
+}
+
+function saveStored(data) {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {
+        console.error("Failed to save state", e);
+    }
+}
+
 export default function App() {
-    const [transactions, setTransactions] = React.useState(DEFAULT_STATE.transactions);
-    const [income, setIncome] = React.useState(DEFAULT_STATE.income);
-    const [debts, setDebts] = React.useState(DEFAULT_STATE.debts);
-    const [profile, setProfile] = React.useState(DEFAULT_STATE.profile);
+    const stored = useMemo(() => loadStored(), []);
+
+    const [transactions, setTransactions] = useState(stored?.transactions ?? DEFAULT_STATE.transactions);
+    const [income, setIncome] = useState(stored?.income ?? DEFAULT_STATE.income);
+    const [debts, setDebts] = useState(stored?.debts ?? DEFAULT_STATE.debts);
+    const [profile, setProfile] = useState(stored?.profile ?? DEFAULT_STATE.profile);
+    useEffect(() => {
+        saveStored({ transactions, income, debts, profile });
+    }, [transactions, income, debts, profile]);
+
 
     const [currentTab, setCurrentTab] = React.useState("overview");
     const [isModalOpen, setIsModalOpen] = React.useState(false);
