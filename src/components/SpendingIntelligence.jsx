@@ -29,9 +29,16 @@ const generateTrendData = (baseValue, volatility = 0.2) => {
 };
 
 export default function SpendingIntelligence({ transactions }) {
+    const [viewMode, setViewMode] = React.useState('full'); // 'full' or 'compact'
+
+    const toggleView = () => {
+        setViewMode(prev => prev === 'full' ? 'compact' : 'full');
+    };
+
     // 1. Prepare Trend Data
     const trends = useMemo(() => {
-        const cats = ["Housing", "Food", "Utilities", "Subscriptions"]; // Top 4 for demo
+        // ... (data generation logic)
+        const cats = ["Housing", "Food", "Utilities", "Subscriptions"];
         return cats.map(cat => {
             const txs = transactions.filter(t => t.category === cat);
             const total = txs.reduce((sum, t) => sum + t.amount, 0);
@@ -41,7 +48,7 @@ export default function SpendingIntelligence({ transactions }) {
                 data: generateTrendData(total / 4), // simulate weekly avg
                 icon: CATEGORY_ICONS[cat] || Home,
                 color: CATEGORY_COLORS[cat] || "text-gray-600 bg-gray-50",
-                change: Math.floor(Math.random() * 20) - 5 // Random % change
+                change: Math.floor(Math.random() * 20) - 5
             };
         });
     }, [transactions]);
@@ -55,12 +62,15 @@ export default function SpendingIntelligence({ transactions }) {
                     </div>
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white">Spending Intelligence</h3>
                 </div>
-                <button className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">
-                    Customize
+                <button
+                    onClick={toggleView}
+                    className="text-sm font-medium text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-white transition-colors flex items-center gap-1"
+                >
+                    {viewMode === 'full' ? 'Hide Signals' : 'Show Signals'}
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-gray-100 dark:divide-gray-700 h-full">
+            <div className={`grid grid-cols-1 ${viewMode === 'full' ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} divide-y lg:divide-y-0 lg:divide-x divide-gray-100 dark:divide-gray-700 h-full transition-all duration-300`}>
 
                 {/* COL 1: Category Trends */}
                 <div className="p-6 space-y-5">
@@ -110,46 +120,53 @@ export default function SpendingIntelligence({ transactions }) {
                 </div>
 
                 {/* COL 2: Risk Signals */}
-                <div className="p-6 bg-gray-50/50 dark:bg-gray-800/50">
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400 mb-4">Risk Signals</h4>
-                    <div className="space-y-3">
-                        <div className="p-3 bg-white border border-rose-100 rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer dark:bg-gray-800 dark:border-rose-900/30 group">
-                            <div className="flex items-start gap-3">
-                                <div className="p-1.5 bg-rose-100 text-rose-600 rounded-full mt-0.5 dark:bg-rose-900/30 dark:text-rose-400">
-                                    <TrendingUp className="w-4 h-4" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-rose-600 transition-colors">Food spending up 12%</p>
-                                    <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">Higher than 3-month avg. Consider cooking at home.</p>
+                {viewMode === 'full' && (
+                    <motion.div
+                        initial={{ opacity: 0, width: 0 }}
+                        animate={{ opacity: 1, width: "auto" }}
+                        exit={{ opacity: 0, width: 0 }}
+                        className="p-6 bg-gray-50/50 dark:bg-gray-800/50 overflow-hidden"
+                    >
+                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400 mb-4">Risk Signals</h4>
+                        <div className="space-y-3">
+                            <div className="p-3 bg-white border border-rose-100 rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer dark:bg-gray-800 dark:border-rose-900/30 group">
+                                <div className="flex items-start gap-3">
+                                    <div className="p-1.5 bg-rose-100 text-rose-600 rounded-full mt-0.5 dark:bg-rose-900/30 dark:text-rose-400">
+                                        <TrendingUp className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-rose-600 transition-colors">Food spending up 12%</p>
+                                        <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">Higher than 3-month avg. Consider cooking at home.</p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="p-3 bg-white border border-amber-100 rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer dark:bg-gray-800 dark:border-amber-900/30 group">
-                            <div className="flex items-start gap-3">
-                                <div className="p-1.5 bg-amber-100 text-amber-600 rounded-full mt-0.5 dark:bg-amber-900/30 dark:text-amber-400">
-                                    <Monitor className="w-4 h-4" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-amber-600 transition-colors">Subscriptions creeping up</p>
-                                    <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">2 new services added this month.</p>
+                            <div className="p-3 bg-white border border-amber-100 rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer dark:bg-gray-800 dark:border-amber-900/30 group">
+                                <div className="flex items-start gap-3">
+                                    <div className="p-1.5 bg-amber-100 text-amber-600 rounded-full mt-0.5 dark:bg-amber-900/30 dark:text-amber-400">
+                                        <Monitor className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-amber-600 transition-colors">Subscriptions creeping up</p>
+                                        <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">2 new services added this month.</p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="p-3 bg-white border border-blue-100 rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer dark:bg-gray-800 dark:border-blue-900/30 group">
-                            <div className="flex items-start gap-3">
-                                <div className="p-1.5 bg-blue-100 text-blue-600 rounded-full mt-0.5 dark:bg-blue-900/30 dark:text-blue-400">
-                                    <AlertTriangle className="w-4 h-4" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors">Utility spike detected</p>
-                                    <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">Gas bill is 15% higher than last month.</p>
+                            <div className="p-3 bg-white border border-blue-100 rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer dark:bg-gray-800 dark:border-blue-900/30 group">
+                                <div className="flex items-start gap-3">
+                                    <div className="p-1.5 bg-blue-100 text-blue-600 rounded-full mt-0.5 dark:bg-blue-900/30 dark:text-blue-400">
+                                        <AlertTriangle className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors">Utility spike detected</p>
+                                        <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">Gas bill is 15% higher than last month.</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
+                    </motion.div>
+                )}
 
                 {/* COL 3: Quick Activity */}
                 <div className="p-6 flex flex-col h-full">
