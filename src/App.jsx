@@ -37,9 +37,48 @@ export default function App() {
     const [income, setIncome] = useState(stored?.income ?? DEFAULT_STATE.income);
     const [debts, setDebts] = useState(stored?.debts ?? DEFAULT_STATE.debts);
     const [profile, setProfile] = useState(stored?.profile ?? DEFAULT_STATE.profile);
+
     useEffect(() => {
-        saveStored({ transactions, income, debts, profile });
+        const load = async () => {
+            try {
+                const res = await fetch("/api/state");
+                const json = await res.json();
+                if (json?.state) {
+                    setTransactions(json.state.transactions ?? DEFAULT_STATE.transactions);
+                    setIncome(json.state.income ?? DEFAULT_STATE.income);
+                    setDebts(json.state.debts ?? DEFAULT_STATE.debts);
+                    setProfile(json.state.profile ?? DEFAULT_STATE.profile);
+                }
+            } catch (e) {
+                console.error("Failed to load cloud state", e);
+            }
+        };
+
+        load();
+    }, []);
+
+
+    useEffect(() => {
+        const payload = { transactions, income, debts, profile };
+
+        // local fallback cache (fast refresh)
+        saveStored(payload);
+
+        const t = setTimeout(async () => {
+            try {
+                await fetch("/api/state", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ state: payload }),
+                });
+            } catch (e) {
+                console.error("Failed to save cloud state", e);
+            }
+        }, 800);
+
+        return () => clearTimeout(t);
     }, [transactions, income, debts, profile]);
+
 
 
     const [currentTab, setCurrentTab] = React.useState("overview");
