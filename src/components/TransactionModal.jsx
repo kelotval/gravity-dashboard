@@ -1,7 +1,7 @@
 import React from "react";
 import { X } from "lucide-react";
 
-export default function TransactionModal({ isOpen, onClose, onSave, initialData }) {
+export default function TransactionModal({ isOpen, onClose, onSave, initialData, availableCategories }) {
     const [formData, setFormData] = React.useState({
         item: "",
         amount: "",
@@ -46,8 +46,8 @@ export default function TransactionModal({ isOpen, onClose, onSave, initialData 
         onClose();
     };
 
-    const categories = ["Housing", "Food", "Utilities", "Health", "Transport", "Personal", "Subscriptions", "Debt", "Credit Card"];
-    const isEditing = !!initialData;
+    // Use passed categories or default to empty list.
+    const categoryList = availableCategories || ["Housing", "Food", "Groceries", "Utilities"];
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -91,15 +91,19 @@ export default function TransactionModal({ isOpen, onClose, onSave, initialData 
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Category</label>
-                            <select
+                            <input
+                                list="category-options"
+                                type="text"
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                placeholder="Select or type..."
                                 value={formData.category}
                                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                            >
-                                {categories.map(cat => (
-                                    <option key={cat} value={cat}>{cat}</option>
+                            />
+                            <datalist id="category-options">
+                                {categoryList.map(cat => (
+                                    <option key={cat} value={cat} />
                                 ))}
-                            </select>
+                            </datalist>
                         </div>
                     </div>
 

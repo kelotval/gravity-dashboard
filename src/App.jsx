@@ -15,9 +15,11 @@ import SpendingIntelligence from "./components/SpendingIntelligence";
 import DebtRiskBanner from "./components/DebtRiskBanner";
 import InterestRiskPanel from "./components/InterestRiskPanel";
 import { calculateEffectiveRateState, getDebtRiskBanners, calculateInterestProjections } from "./utils/PayoffEngine";
+import AmexCsvImport from "./components/AmexCsvImport";
+import { categorizeTransaction } from "./utils/categorize";
 
 import { DEFAULT_STATE } from "./data";
-import { DollarSign, TrendingDown, PiggyBank, Wallet, Plus } from "lucide-react";
+import { DollarSign, TrendingDown, PiggyBank, Wallet, Plus, RefreshCw } from "lucide-react";
 
 const STORAGE_KEY = "er_finance_state_v1";
 
@@ -155,6 +157,345 @@ export default function App() {
         setIsModalOpen(true);
     };
 
+    // AMEX CSV Import
+    const makeTxnKey = (t) => {
+        if (t.reference) return `ref:${String(t.reference).trim()}`;
+        const date = String(t.date || "").trim();
+        const amt = Number(t.amount || 0).toFixed(2);
+        const desc = String(t.description || t.merchant || "").trim().toLowerCase();
+        return `${date}|${amt}|${desc}`;
+    };
+
+    // State for categories (starting with defaults)
+    const [categories, setCategories] = useState([
+        "Housing",
+        "Groceries",
+        "Dining Out",
+        "Coffee",
+        "Transport",
+        "Fuel",
+        "Utilities",
+        "Subscriptions",
+        "Health",
+        "Insurance",
+        "Shopping",
+        "Home and Garden",
+        "Entertainment",
+        "Travel",
+        "Gifts",
+        "Education",
+        "Education / Career",
+        "Fees and Interest",
+        "Transfers",
+        "Alcohol & Bottle Shop",
+        "Gambling & Lottery",
+        "Other",
+    ]);
+
+    const handleAddCategory = (newCat) => {
+        if (!categories.includes(newCat)) {
+            setCategories(prev => [...prev, newCat].sort());
+        }
+    };
+
+    // Extensive Categorization Rules (Australian Context)
+    const CATEGORY_RULES = [
+        // -----------------------
+        // Transfers (must be early)
+        // -----------------------
+        {
+            category: "Transfers",
+            keywords: [
+                "transfer", "internet transfer", "osko", "pay anyone", "direct credit",
+                "bpay", "payment received", "salary", "payroll", "reimbursement",
+                "credit", "refund", "reversal"
+            ]
+        },
+
+        // -----------------------
+        // Fees and Interest (early)
+        // -----------------------
+        {
+            category: "Fees and Interest",
+            keywords: [
+                "interest", "late fee", "annual fee", "finance charge",
+                "foreign transaction fee", "fx fee", "overlimit", "fee"
+            ]
+        },
+
+        // -----------------------
+        // Housing
+        // -----------------------
+        {
+            category: "Housing",
+            keywords: [
+                "rent", "mortgage", "strata", "property management", "real estate",
+                "council rates", "water rates", "body corporate"
+            ]
+        },
+
+        // -----------------------
+        // Groceries
+        // -----------------------
+        {
+            category: "Groceries",
+            keywords: [
+                "woolworths", "coles", "aldi", "iga", "harris farm", "costco",
+                "foodland", "spar", "supabarn", "drakes", "fresh choice",
+                "butcher", "fruit shop", "greengrocer", "seafood"
+            ]
+        },
+
+        // -----------------------
+        // Dining Out
+        // -----------------------
+        {
+            category: "Dining Out",
+            keywords: [
+                "restaurant", "bistro", "eatery", "dining", "pub", "hotel bar",
+                "mcdonald", "kfc", "hungry jack", "burger", "pizza", "dominos",
+                "subway", "sushi", "grill", "nandos", "oporto", "guzman", "zambrero",
+                "red rooster", "thai", "ramen", "kebab", "dumpling"
+            ]
+        },
+
+        // -----------------------
+        // Coffee
+        // -----------------------
+        {
+            category: "Coffee",
+            keywords: [
+                "cafe", "coffee", "espresso", "barista", "mccafe",
+                "starbucks", "gloria jeans", "zarraffas", "campos", "single o"
+            ]
+        },
+
+        // -----------------------
+        // Fuel
+        // -----------------------
+        {
+            category: "Fuel",
+            keywords: [
+                "bp", "shell", "caltex", "ampol", "mobil", "7-eleven fuel", "7 eleven fuel",
+                "united petroleum", "liberty", "metro petroleum", "petrol", "fuel"
+            ]
+        },
+
+        // -----------------------
+        // Transport
+        // -----------------------
+        {
+            category: "Transport",
+            keywords: [
+                // Rideshare / taxis
+                "uber trip", "uber", "didi", "ola", "taxi", "13cabs",
+
+                // Public transport
+                "opal", "myki", "transportfornsw", "transport for nsw", "translink",
+
+                // Parking / tolls
+                "linkt", "e-toll", "etoll", "toll", "wilson parking", "secure parking"
+            ]
+        },
+
+        // -----------------------
+        // Utilities
+        // -----------------------
+        {
+            category: "Utilities",
+            keywords: [
+                "agl", "origin", "energy australia", "red energy", "alinta",
+                "electricity", "gas", "internet", "broadband",
+                "telstra", "optus", "vodafone", "aussie broadband", "tpg", "iiNet",
+                "sydney water", "water corporation", "unitywater"
+            ]
+        },
+
+        // -----------------------
+        // Subscriptions (use statement patterns, avoid plain "apple"/"google")
+        // -----------------------
+        {
+            category: "Subscriptions",
+            keywords: [
+                "apple.com/bill", "itunes", "app store",
+                "prime vide", "amazon prime", "netflix", "spotify",
+                "disney", "binge", "kayo", "stan", "paramount", "youtube premium",
+                "audible", "playstation network", "xbox", "nintendo",
+                "openai", "chatgpt"
+            ]
+        },
+
+        // -----------------------
+        // Health
+        // -----------------------
+        {
+            category: "Health",
+            keywords: [
+                "chemist", "pharmacy", "chemist warehouse", "priceline", "terrywhite",
+                "doctor", "medical", "dental", "dentist", "pathology", "radiology",
+                "physio", "chiro", "optometrist"
+            ]
+        },
+
+        // -----------------------
+        // Insurance
+        // -----------------------
+        {
+            category: "Insurance",
+            keywords: [
+                "nrma", "aami", "allianz", "gio", "youi", "budget direct",
+                "racv", "racq", "nib", "bupa", "medibank", "hcf"
+            ]
+        },
+
+        // -----------------------
+        // Shopping
+        // -----------------------
+        {
+            category: "Shopping",
+            keywords: [
+                "amazon", "ebay", "kmart", "big w", "target", "myer", "david jones",
+                "jb hi-fi", "officeworks", "kogan", "the good guys", "harvey norman",
+                "uniqlo", "zara", "h&m", "cotton on", "shein", "temu"
+            ]
+        },
+
+        // -----------------------
+        // Home and Garden
+        // -----------------------
+        {
+            category: "Home and Garden",
+            keywords: [
+                "bunnings", "ikea", "mitre 10", "stratco", "freedom", "fantastic furniture",
+                "spotlight", "nursery", "garden", "hardware"
+            ]
+        },
+
+        // -----------------------
+        // Entertainment
+        // -----------------------
+        {
+            category: "Entertainment",
+            keywords: [
+                "event cinemas", "hoyts", "imax", "cinema", "theatre",
+                "ticketek", "ticketmaster",
+                "steam", "epic games", "playstation store", "xbox store"
+            ]
+        },
+
+        // -----------------------
+        // Travel
+        // -----------------------
+        {
+            category: "Travel",
+            keywords: [
+                "qantas", "virgin", "jetstar", "emirates", "singapore airlines",
+                "airbnb", "booking.com", "expedia", "hotel", "resort",
+                "airalo", "travel"
+            ]
+        },
+
+        // -----------------------
+        // Gifts
+        // -----------------------
+        {
+            category: "Gifts",
+            keywords: [
+                "gift", "flowers", "florist", "gift card"
+            ]
+        },
+
+        // -----------------------
+        // Education
+        // -----------------------
+        {
+            category: "Education",
+            keywords: [
+                "course", "training", "udemy", "coursera", "pluralsight", "linkedin learning",
+                "university", "tafe"
+            ]
+        },
+    ];
+
+
+    // Feature: Rescan all transactions and update categories
+    const reapplyCategorization = () => {
+        let updatedCount = 0;
+
+        const newTransactions = transactions.map(tx => {
+            const desc = tx.description || tx.item || ""; // Fallback to item if description missing
+            const guessed = categorizeTransaction(desc, CATEGORY_RULES);
+
+            // Update only if currently Uncategorized and we found a match
+            if (guessed !== "Uncategorized" && tx.category !== guessed) {
+                updatedCount++;
+                return { ...tx, category: guessed };
+            }
+            return tx;
+        });
+
+        if (updatedCount > 0) {
+            setTransactions(newTransactions);
+            alert(`Rescan complete! Updated ${updatedCount} transactions.`);
+        } else {
+            alert("Rescan complete. No new matches found.");
+        }
+    };
+
+    const handleAmexImport = (importedTxns) => {
+        try {
+            if (!Array.isArray(importedTxns) || importedTxns.length === 0) return;
+
+            setTransactions((prev) => {
+                try {
+                    const existingKeys = new Set(prev.map(makeTxnKey));
+                    const toAdd = [];
+
+                    for (const t of importedTxns) {
+                        const date = t.date;
+                        const amount = Number(t.amount || 0);
+                        const description = String(t.description || t.merchant || "").trim();
+
+                        if (!date || !description || Number.isNaN(amount)) continue;
+
+                        const category = t.category || categorizeTransaction(description, CATEGORY_RULES);
+
+                        // If the guessed category is new, ensure it's in our list
+                        if (category !== "Uncategorized") {
+                            handleAddCategory(category);
+                        }
+
+                        const normalized = {
+                            id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `amex-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                            date,
+                            amount,
+                            item: description,
+                            description,
+                            merchant: t.merchant || description,
+                            category: category,
+                            reference: t.reference || null,
+                            source: "amex_csv",
+                            importedAt: new Date().toISOString(),
+                        };
+
+                        const key = makeTxnKey(normalized);
+                        if (!existingKeys.has(key)) {
+                            toAdd.push(normalized);
+                            existingKeys.add(key);
+                        }
+                    }
+
+                    return [...toAdd, ...prev];
+                } catch (err) {
+                    console.error("Error processing imported transactions:", err);
+                    return prev;
+                }
+            });
+        } catch (e) {
+            console.error("Failed to handle AMEX import:", e);
+        }
+    };
+
     // Insight Actions
     const [actionFeedback, setActionFeedback] = useState(null);
 
@@ -166,11 +507,10 @@ export default function App() {
             setActionFeedback(`Navigated to ${action.label}`);
         } else if (action.type === 'FILTER') {
             setSearchQuery(action.payload);
-            setCurrentTab('transactions'); // Ensure we are on the view to see the filter
+            setCurrentTab('transactions');
             setActionFeedback(`Applied filter: ${action.payload}`);
         }
 
-        // Clear feedback after 3s
         setTimeout(() => setActionFeedback(null), 3000);
     };
 
@@ -260,8 +600,15 @@ export default function App() {
             return (
                 <div>
                     <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-bold text-gray-900">All Transactions</h2>
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">All Transactions</h2>
                         <div className="flex gap-2">
+                            <button
+                                onClick={reapplyCategorization}
+                                className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                                title="Rescan existing transactions with new rules"
+                            >
+                                <RefreshCw className="w-4 h-4 mr-2" /> Rescan Categories
+                            </button>
                             <button
                                 onClick={handleNewClick}
                                 className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
@@ -270,6 +617,12 @@ export default function App() {
                             </button>
                         </div>
                     </div>
+
+                    {/* AMEX Import */}
+                    <div className="mb-6">
+                        <AmexCsvImport onImport={handleAmexImport} />
+                    </div>
+
                     <TransactionList
                         transactions={transactions}
                         onDelete={handleDeleteTransaction}
@@ -279,6 +632,7 @@ export default function App() {
                 </div>
             );
         }
+
 
         // Default: Overview
         return (
@@ -521,8 +875,12 @@ export default function App() {
                     setIsModalOpen(false);
                     setEditingTransaction(null);
                 }}
-                onSave={handleSaveTransaction}
+                onSave={(tx) => {
+                    handleSaveTransaction(tx);
+                    handleAddCategory(tx.category); // Learn new categories on save
+                }}
                 initialData={editingTransaction}
+                availableCategories={categories}
             />
         </DashboardLayout>
     );

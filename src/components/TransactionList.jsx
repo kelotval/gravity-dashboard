@@ -1,30 +1,51 @@
 import React, { useState } from "react";
 import clsx from "clsx";
-import { ArrowUpRight, ArrowDownRight, Coffee, Home, Zap, Heart, Smartphone, Scissors, Monitor, Trash2, Pencil, CreditCard, Search, X } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Coffee, Home, Zap, Heart, Smartphone, Scissors, Monitor, Trash2, Pencil, CreditCard, Search, X, ShoppingBasket, Tag, Fuel, Utensils } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const CATEGORY_ICONS = {
-    Housing: Home,
-    Food: Coffee,
-    Utilities: Zap,
-    Health: Heart,
-    Transport: Smartphone,
-    Personal: Scissors,
-    Subscriptions: Monitor,
-    Debt: ArrowUpRight,
-    "Credit Card": CreditCard,
+// Helper to deterministically pick a color for a string
+const getColorForCategory = (category) => {
+    const colors = [
+        "bg-blue-100 text-blue-600",
+        "bg-emerald-100 text-emerald-600",
+        "bg-orange-100 text-orange-600",
+        "bg-yellow-100 text-yellow-600",
+        "bg-red-100 text-red-600",
+        "bg-green-100 text-green-600",
+        "bg-purple-100 text-purple-600",
+        "bg-pink-100 text-pink-600",
+        "bg-indigo-100 text-indigo-600",
+        "bg-teal-100 text-teal-600",
+        "bg-cyan-100 text-cyan-600",
+        "bg-lime-100 text-lime-600",
+    ];
+    let hash = 0;
+    for (let i = 0; i < category.length; i++) {
+        hash = category.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
 };
 
-const CATEGORY_COLORS = {
-    Housing: "bg-blue-100 text-blue-600",
-    Food: "bg-orange-100 text-orange-600",
-    Utilities: "bg-yellow-100 text-yellow-600",
-    Health: "bg-red-100 text-red-600",
-    Transport: "bg-green-100 text-green-600",
-    Personal: "bg-purple-100 text-purple-600",
-    Subscriptions: "bg-pink-100 text-pink-600",
-    Debt: "bg-gray-100 text-gray-600",
-    "Credit Card": "bg-indigo-100 text-indigo-600",
+const getCategoryIcon = (category) => {
+    const lower = category.toLowerCase();
+
+    // Map known ones
+    if (lower === "housing") return Home;
+    if (lower === "groceries") return ShoppingBasket;
+    if (lower === "food") return Coffee; // Keep generic food/coffee
+    if (lower === "dining out") return Utensils;
+    if (lower === "coffee") return Coffee;
+    if (lower === "fuel") return Fuel;
+    if (lower === "utilities") return Zap;
+    if (lower === "health") return Heart;
+    if (lower === "transport") return Smartphone; // or Car/Bus if available in lucide-react standard set
+    if (lower === "personal") return Scissors;
+    if (lower === "subscriptions") return Monitor;
+    if (lower === "debt") return ArrowUpRight;
+    if (lower === "credit card") return CreditCard;
+
+    // Default for unknown maps
+    return Tag;
 };
 
 export default function TransactionList({ transactions, onDelete, onEdit, groupByCategory = false, title = "Recent Transactions", hideSearch = false, headerAction = null }) {
@@ -68,6 +89,13 @@ export default function TransactionList({ transactions, onDelete, onEdit, groupB
             return acc;
         }, {});
 
+        // Sort: Uncategorized last, then alphabetical
+        const sortedEntries = Object.entries(grouped).sort(([a], [b]) => {
+            if (a === "Uncategorized") return 1;
+            if (b === "Uncategorized") return -1;
+            return a.localeCompare(b);
+        });
+
         const isEmpty = filteredTransactions.length === 0;
 
         return (
@@ -86,8 +114,8 @@ export default function TransactionList({ transactions, onDelete, onEdit, groupB
                 {/* ... Rest of grouped view ... */}
                 <motion.div layout className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <AnimatePresence>
-                        {Object.entries(grouped).map(([category, txs]) => {
-                            const Icon = CATEGORY_ICONS[category] || ArrowDownRight;
+                        {sortedEntries.map(([category, txs]) => {
+                            const Icon = getCategoryIcon(category);
                             const totalAmount = txs.reduce((sum, t) => sum + t.amount, 0);
 
                             return (
@@ -101,7 +129,7 @@ export default function TransactionList({ transactions, onDelete, onEdit, groupB
                                 >
                                     <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-700/30">
                                         <div className="flex items-center gap-3">
-                                            <div className={clsx("p-2 rounded-lg", CATEGORY_COLORS[category] || "bg-gray-100 text-gray-600")}>
+                                            <div className={clsx("p-2 rounded-lg", getColorForCategory(category))}>
                                                 <Icon className="w-5 h-5" />
                                             </div>
                                             <h3 className="font-bold text-gray-900 dark:text-white">{category}</h3>
@@ -121,9 +149,14 @@ export default function TransactionList({ transactions, onDelete, onEdit, groupB
                                                 >
                                                     <div className="flex-1 min-w-0 pr-4">
                                                         <p className="font-medium text-gray-900 truncate dark:text-white">{tx.item}</p>
-                                                        <p className="text-xs text-gray-500 dark:text-gray-400">{new Date().toLocaleDateString()}</p>
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(tx.date || Date.now()).toLocaleDateString()}</p>
                                                     </div>
                                                     <div className="flex items-center gap-2">
+                                                        {tx.source === 'amex_csv' && (
+                                                            <div title="Imported from AMEX" className="p-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">
+                                                                <CreditCard className="w-3 h-3" />
+                                                            </div>
+                                                        )}
                                                         <span className="font-medium text-gray-900 dark:text-gray-200">${tx.amount.toLocaleString()}</span>
                                                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             {onEdit && (
@@ -192,8 +225,8 @@ export default function TransactionList({ transactions, onDelete, onEdit, groupB
             <motion.div layout className="divide-y divide-gray-100 dark:divide-gray-700">
                 <AnimatePresence>
                     {filteredTransactions.map((tx) => {
-                        const Icon = CATEGORY_ICONS[tx.category] || ArrowDownRight;
-                        const colorClass = CATEGORY_COLORS[tx.category] || "bg-gray-100 text-gray-600";
+                        const Icon = getCategoryIcon(tx.category);
+                        const colorClass = getColorForCategory(tx.category);
 
                         return (
                             <motion.div
@@ -219,6 +252,11 @@ export default function TransactionList({ transactions, onDelete, onEdit, groupB
                                 <div className="flex items-center gap-3">
                                     <span className="font-semibold text-gray-900 dark:text-white">${tx.amount.toLocaleString()}</span>
                                     <div className="flex items-center gap-1">
+                                        {tx.source === 'amex_csv' && (
+                                            <div title="Imported from AMEX" className="mr-2 p-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">
+                                                <CreditCard className="w-3 h-3" />
+                                            </div>
+                                        )}
                                         {onEdit && (
                                             <button
                                                 onClick={() => onEdit(tx)}
