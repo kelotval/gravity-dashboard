@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { generatePayoffAllocation, calculateEffectiveRateState, calculateInterestProjections } from "../utils/PayoffEngine";
 import InterestRiskPanel from "./InterestRiskPanel";
 
-export default function PayoffPlanView({ debts, advancedSettings }) {
+export default function PayoffPlanView({ debts, advancedSettings, onUpdateDebts }) {
     const [surplusCash, setSurplusCash] = useState(500); // Default surplus
     const [horizonDays, setHorizonDays] = useState(90);  // Lookahead window
 
@@ -162,6 +162,25 @@ export default function PayoffPlanView({ debts, advancedSettings }) {
                                             Risk Rate: {riskAdjustedRatePct}%
                                         </span>
                                     </div>
+
+                                    {/* Payoff Deadline Goals (Advanced Feature) */}
+                                    {advancedSettings?.payoffByDate && (
+                                        <div className="mt-3 flex items-center gap-2">
+                                            <Calendar className="w-4 h-4 text-purple-500" />
+                                            <label className="text-xs text-gray-500 dark:text-gray-400">Target Date:</label>
+                                            <input
+                                                type="date"
+                                                className="bg-gray-50 border border-gray-200 rounded px-2 py-1 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                                value={item.targetPayoffDate || ""}
+                                                onChange={(e) => {
+                                                    const updatedDebts = debts.map(d =>
+                                                        d.id === item.id ? { ...d, targetPayoffDate: e.target.value } : d
+                                                    );
+                                                    onUpdateDebts(updatedDebts);
+                                                }}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Allocation Plan */}

@@ -102,7 +102,7 @@ export default function App() {
         }, 800);
 
         return () => clearTimeout(t);
-    }, [transactions, income, debts, profile, hasLoadedCloud]);
+    }, [transactions, income, debts, profile, advancedSettings, hasLoadedCloud]);
 
 
 
@@ -230,6 +230,7 @@ export default function App() {
             return (
                 <PayoffPlanView
                     debts={debts}
+                    onUpdateDebts={setDebts}
                     advancedSettings={advancedSettings}
                 />
             );
@@ -493,15 +494,17 @@ export default function App() {
                     </div>
 
                     {/* Row 2: Insights Card (Half Width) */}
-                    <div className="col-span-1 lg:col-span-6 w-full h-auto lg:h-full">
-                        <InsightsCard
-                            transactions={transactions}
-                            income={income}
-                            debts={debts}
-                            savingsRate={savingsRate}
-                            onAction={handleInsightAction}
-                        />
-                    </div>
+                    {advancedSettings.aiInsights && (
+                        <div className="col-span-1 lg:col-span-6 w-full h-auto lg:h-full">
+                            <InsightsCard
+                                transactions={transactions}
+                                income={income}
+                                debts={debts}
+                                savingsRate={savingsRate}
+                                onAction={handleInsightAction}
+                            />
+                        </div>
+                    )}
                 </div>
             </>
         );
