@@ -41,14 +41,6 @@ export default function DashboardLayout({ children, currentTab, onTabChange }) {
 
     return (
         <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
-            {/* Mobile Menu Button */}
-            <button
-                className="lg:hidden fixed top-4 right-4 z-50 p-2 bg-white rounded-md shadow-sm"
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            >
-                <Menu className="w-6 h-6 text-gray-600" />
-            </button>
-
             {/* Sidebar */}
             <aside className={clsx(
                 "fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 dark:bg-gray-800 dark:border-gray-700 transform transition-transform duration-200 ease-in-out lg:transform-none",
@@ -84,7 +76,15 @@ export default function DashboardLayout({ children, currentTab, onTabChange }) {
             {/* Main Content Wrapper */}
             <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden overflow-y-auto">
                 {/* Top Header for Theme Toggle */}
-                <header className="flex justify-end items-center p-4 pr-16 lg:pr-8 bg-gray-50 dark:bg-gray-900 sticky top-0 z-50">
+                <header className="flex justify-end items-center p-4 lg:pr-8 bg-gray-50 dark:bg-gray-900 sticky top-0 z-50 gap-3">
+                    {/* Mobile Menu Button - Moved inside header */}
+                    <button
+                        className="lg:hidden p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+                        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                    >
+                        <Menu className="w-6 h-6 text-gray-600 dark:text-gray-300" />
+                    </button>
+
                     <button
                         onClick={toggleTheme}
                         className="p-2 rounded-full bg-white shadow-sm text-gray-600 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700 cursor-pointer"

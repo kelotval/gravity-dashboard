@@ -10,6 +10,8 @@ export default function TransactionModal({ isOpen, onClose, onSave, initialData,
     });
 
     // Load initial data when modal opens or initialData changes
+    const isEditing = !!initialData;
+
     React.useEffect(() => {
         if (isOpen && initialData) {
             setFormData({
