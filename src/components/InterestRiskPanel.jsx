@@ -1,6 +1,7 @@
 import React from "react";
 import { DollarSign, TrendingUp, AlertTriangle, ArrowRight, PiggyBank, Clock } from "lucide-react";
 import clsx from "clsx";
+import Tooltip from "./Tooltip";
 
 export default function InterestRiskPanel({ projections, savingsOpportunities, worstOffender }) {
     if (!projections) return null;
@@ -15,6 +16,9 @@ export default function InterestRiskPanel({ projections, savingsOpportunities, w
                             <TrendingUp className="w-5 h-5" />
                         </div>
                         <h3 className="font-bold text-gray-900 dark:text-white">Projected Waste</h3>
+                        <Tooltip content="Total interest you will pay over the next 12 months if only minimum payments are made.">
+                            <DollarSign className="w-4 h-4 text-gray-400 ml-1 cursor-help" />
+                        </Tooltip>
                     </div>
                     <p className="text-sm text-gray-500 mb-4 dark:text-gray-400">Estimated interest cost if you only pay minimums.</p>
                 </div>
@@ -44,6 +48,9 @@ export default function InterestRiskPanel({ projections, savingsOpportunities, w
                             <AlertTriangle className="w-5 h-5" />
                         </div>
                         <h3 className="font-bold text-gray-900 dark:text-white">Cost of Delay</h3>
+                        <Tooltip content="The amount of interest accruing every single day you carry this debt.">
+                            <ArrowRight className="w-4 h-4 text-gray-400 ml-1 cursor-help" />
+                        </Tooltip>
                     </div>
                     <p className="text-sm text-gray-500 mb-4 dark:text-gray-400">The single most expensive debt to hold onto right now.</p>
                 </div>

@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from "react";
 import { Wallet, Car, AlertCircle, TrendingUp, AlertTriangle, ArrowRight } from "lucide-react";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
 import { getRateWarnings, calculatePayoffStrategy, getCurrentRate, deriveDebtStatus, calculateEffectiveRateState } from "../utils/PayoffEngine";
 import kiaImage from "../assets/kia_sportage.png";
+import Tooltip from "./Tooltip";
 
 export default function ActiveLiabilities({ debts, onUpdateDebts, advancedSettings }) {
     const [strategy, setStrategy] = useState('AVALANCHE'); // AVALANCHE or SNOWBALL
@@ -28,18 +29,22 @@ export default function ActiveLiabilities({ debts, onUpdateDebts, advancedSettin
 
                 {/* Strategy Selector */}
                 <div className="bg-white p-1.5 rounded-lg border border-gray-200 flex dark:bg-gray-800 dark:border-gray-700">
-                    <button
-                        onClick={() => setStrategy('AVALANCHE')}
-                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${strategy === 'AVALANCHE' ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400'}`}
-                    >
-                        Avalanche (Save Interest)
-                    </button>
-                    <button
-                        onClick={() => setStrategy('SNOWBALL')}
-                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${strategy === 'SNOWBALL' ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400'}`}
-                    >
-                        Snowball (Fast Wins)
-                    </button>
+                    <Tooltip content="Focuses on paying off highest interest rate debts first. Mathematically saves the most money.">
+                        <button
+                            onClick={() => setStrategy('AVALANCHE')}
+                            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${strategy === 'AVALANCHE' ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400'}`}
+                        >
+                            Avalanche (Save Interest)
+                        </button>
+                    </Tooltip>
+                    <Tooltip content="Focuses on paying off smallest balances first. Builds psychological momentum quickly.">
+                        <button
+                            onClick={() => setStrategy('SNOWBALL')}
+                            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${strategy === 'SNOWBALL' ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400'}`}
+                        >
+                            Snowball (Fast Wins)
+                        </button>
+                    </Tooltip>
                 </div>
             </div>
 
@@ -216,6 +221,7 @@ export default function ActiveLiabilities({ debts, onUpdateDebts, advancedSettin
                                                         <stop offset="95%" stopColor={color} stopOpacity={0} />
                                                     </linearGradient>
                                                 </defs>
+                                                <RechartsTooltip />
                                                 <Area
                                                     type="monotone"
                                                     dataKey="value"
@@ -240,7 +246,9 @@ export default function ActiveLiabilities({ debts, onUpdateDebts, advancedSettin
                                         </div>
                                         <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-600">
                                             <div className="flex flex-col">
-                                                <span className="text-xs text-gray-500 dark:text-gray-400">Effective Rate</span>
+                                                <Tooltip content="The true cost of the loan including fees, compounding frequency, and introductory rates.">
+                                                    <span className="text-xs text-gray-500 dark:text-gray-400 border-b border-dotted border-gray-400 cursor-help">Effective Rate</span>
+                                                </Tooltip>
                                                 {rateIsSwitched && (
                                                     <span className="text-[10px] font-semibold text-orange-600 dark:text-orange-400">
                                                         Revert rate active

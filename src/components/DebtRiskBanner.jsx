@@ -1,5 +1,6 @@
 import React from "react";
-import { AlertCircle, AlertTriangle, TrendingUp, X } from "lucide-react";
+import { AlertCircle, AlertTriangle, TrendingUp, X, Info } from "lucide-react";
+import Tooltip from "./Tooltip";
 
 export default function DebtRiskBanner({ banners, onClose }) {
     if (!banners || banners.length === 0) return null;
@@ -54,7 +55,11 @@ export default function DebtRiskBanner({ banners, onClose }) {
                         {/* Impact Section */}
                         <div className="flex items-center gap-6 z-10 w-full md:w-auto mt-2 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 border-black/10">
                             <div className="flex-1 md:flex-initial">
-                                <p className="text-xs opacity-75 uppercase tracking-wide font-semibold mb-1">Monthly Impact</p>
+                                <Tooltip content="The estimated increase in your monthly interest bill due to the rate change.">
+                                    <p className="text-xs opacity-75 uppercase tracking-wide font-semibold mb-1 flex items-center gap-1 cursor-help w-fit">
+                                        Monthly Impact <Info className="w-3 h-3" />
+                                    </p>
+                                </Tooltip>
                                 <div className="flex items-baseline gap-1">
                                     {banner.estimatedExtraMonthlyInterest !== null ? (
                                         <>

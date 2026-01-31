@@ -17,6 +17,7 @@ import InterestRiskPanel from "./components/InterestRiskPanel";
 import { calculateEffectiveRateState, getDebtRiskBanners, calculateInterestProjections } from "./utils/PayoffEngine";
 import AmexCsvImport from "./components/AmexCsvImport";
 import { categorizeTransaction } from "./utils/categorize";
+import { calculateDetailedHealthScore } from "./utils/healthScore";
 
 import { DEFAULT_STATE } from "./data";
 import { DollarSign, TrendingDown, PiggyBank, Wallet, Plus, RefreshCw } from "lucide-react";
@@ -347,14 +348,14 @@ export default function App() {
     const dtiRatio = totalIncome > 0 ? ((totalMonthlyDebt / totalIncome) * 100).toFixed(1) : "0.0";
     const netWorth = (profile.assets || 0) - totalDebtBalance;
 
-    // Simple health score algorithm
-    const calcHealthScore = () => {
-        let score = 50;
-        score += parseFloat(savingsRate) * 1.5; // Savings boost score
-        score -= parseFloat(dtiRatio) * 0.5;    // Debt drags score
-        return Math.min(100, Math.max(0, Math.round(score)));
-    };
-    const healthScore = calcHealthScore();
+    // Advanced health score algorithm
+    const { totalScore: healthScore, breakdown: healthBreakdown } = calculateDetailedHealthScore({
+        savingsRate: parseFloat(savingsRate),
+        dtiRatio: parseFloat(dtiRatio),
+        debts,
+        netSavings,
+        totalIncome
+    });
 
     // 2. Event Handlers
     const handleSaveTransaction = (txData) => {
@@ -741,6 +742,7 @@ export default function App() {
                 <div className="mb-8">
                     <FinancialHealthBanner
                         score={healthScore}
+                        breakdown={healthBreakdown}
                         savingsRate={savingsRate}
                         dtiRatio={dtiRatio}
                         netWorth={netWorth}
@@ -756,6 +758,7 @@ export default function App() {
                         color="blue"
                         trend="up"
                         trendValue="+0.0%"
+                        tooltip="Total earnings from all sources this month, including salary and side income."
                     />
                     <MetricCard
                         title="Total Expenses"
@@ -764,6 +767,7 @@ export default function App() {
                         color="orange"
                         trend={totalExpenses > totalIncome ? "up" : "down"}
                         trendValue="vs Income"
+                        tooltip="Total spending across all categories. Try to keep this below your income."
                     />
                     <MetricCard
                         title="Net Savings"
@@ -772,6 +776,7 @@ export default function App() {
                         color="green"
                         trend={netSavings > 0 ? "up" : "down"}
                         trendValue={`${savingsRate}% Rate`}
+                        tooltip="Income minus Expenses. This is your monthly wealth generation."
                     />
                     <MetricCard
                         title="Debt Balance"
@@ -780,6 +785,7 @@ export default function App() {
                         color="red"
                         trend="down"
                         trendValue="Total"
+                        tooltip="Total remaining principal on all active loans and credit cards."
                     />
                 </div>
 
