@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Calculator, Calendar, TrendingDown, CheckCircle, Flag, DollarSign, ArrowRight, Wallet } from "lucide-react";
+import { Calculator, Calendar, TrendingDown, CheckCircle, Flag, DollarSign, ArrowRight, Wallet, Info } from "lucide-react";
 import clsx from "clsx";
 import { generatePayoffAllocation, calculateEffectiveRateState, calculateInterestProjections } from "../utils/PayoffEngine";
 import InterestRiskPanel from "./InterestRiskPanel";
@@ -8,12 +8,66 @@ export default function PayoffPlanView({ debts, advancedSettings, onUpdateDebts 
     const [surplusCash, setSurplusCash] = useState(500); // Default surplus
     const [horizonDays, setHorizonDays] = useState(90);  // Lookahead window
 
-    // Generate Smart Plan
+    // Generate Smart Plan with surplus
     const allocationPlan = useMemo(() => {
         return generatePayoffAllocation(debts, surplusCash, horizonDays);
     }, [debts, surplusCash, horizonDays]);
 
+    // Generate Baseline Plan (0 surplus) for Simulator Comparison
+    const baselinePlan = useMemo(() => {
+        return generatePayoffAllocation(debts, 0, horizonDays);
+    }, [debts, horizonDays]);
+
     const totalMonthlyCommitment = allocationPlan.reduce((acc, d) => acc + d.allocation.totalPay, 0);
+
+    // Simulator Metrics
+    const simMetrics = useMemo(() => {
+        if (!allocationPlan || allocationPlan.length === 0 || !baselinePlan || baselinePlan.length === 0) {
+            return {
+                currentInterest: 0,
+                baselineInterest: 0,
+                interestSaved: 0,
+                timeSaved: 0,
+                payoffDate: new Date(),
+                priorityDebtMonths: 0,
+                priorityDebtSaved: 0
+            };
+        }
+
+        const currentInterest = allocationPlan.reduce((acc, item) => {
+            const val = item.allocation.projectedInterest || 0;
+            return val === Infinity ? acc : acc + val;
+        }, 0);
+
+        const baselineInterest = baselinePlan.reduce((acc, item) => {
+            const val = item.allocation.projectedInterest || 0;
+            return val === Infinity ? acc : acc + val;
+        }, 0);
+
+        const currentMaxMonths = Math.max(0, ...allocationPlan.map(i => i.allocation.monthsToPayoff));
+        const baselineMaxMonths = Math.max(0, ...baselinePlan.map(i => i.allocation.monthsToPayoff));
+
+        // Priority debt (first in allocation plan) metrics
+        const priorityDebtCurrent = allocationPlan[0]?.allocation.monthsToPayoff || 0;
+        const priorityDebtBaseline = baselinePlan[0]?.allocation.monthsToPayoff || 0;
+        const priorityDebtSaved = Math.max(priorityDebtBaseline - priorityDebtCurrent, 0);
+
+        const interestSaved = Math.max(baselineInterest - currentInterest, 0);
+        const timeSaved = Math.max(baselineMaxMonths - currentMaxMonths, 0);
+
+        const payoffDate = new Date();
+        payoffDate.setMonth(payoffDate.getMonth() + (isFinite(currentMaxMonths) ? currentMaxMonths : 0));
+
+        return {
+            currentInterest,
+            baselineInterest,
+            interestSaved,
+            timeSaved,
+            payoffDate,
+            priorityDebtMonths: priorityDebtCurrent,
+            priorityDebtSaved
+        };
+    }, [allocationPlan, baselinePlan]);
 
     return (
         <div className="space-y-8 pb-12">
@@ -89,24 +143,50 @@ export default function PayoffPlanView({ debts, advancedSettings, onUpdateDebts 
                                     />
                                     <span className="font-mono font-bold text-xl min-w-[80px] text-right">${surplusCash}</span>
                                 </div>
-                                <p className="text-xs text-gray-400 mt-2">
-                                    Adjusting this slider updates your payoff timeline in real-time.
+                                <p className="text-xs text-blue-200/70 mt-3 flex items-center gap-1.5">
+                                    <Info className="w-3 h-3" />
+                                    <span>Drag to see how extra payments reduce your life-of-loan interest.</span>
                                 </p>
                             </div>
 
-                            <div className="bg-white/10 p-4 rounded-xl border border-white/5 flex justify-between items-center">
-                                <div>
-                                    <p className="text-gray-300 text-sm">Projected Total Interest</p>
-                                    <p className="text-2xl font-bold text-white mt-1">
-                                        ${allocationPlan.reduce((acc, item) => acc + (item.allocation.totalInterest || 0), 0).toLocaleString()}
-                                        <span className="text-xs font-normal text-gray-400 ml-1">(Estimated)</span>
-                                    </p>
+                            <div className="grid grid-cols-2 gap-4">
+                                {/* Total Interest Impact */}
+                                <div className="bg-white/10 p-4 rounded-xl border border-white/5 flex flex-col justify-between">
+                                    <div>
+                                        <p className="text-gray-300 text-xs uppercase font-semibold tracking-wider">Projected Interest</p>
+                                        <p className="text-2xl font-bold text-white mt-1">
+                                            ${Math.round(simMetrics.currentInterest).toLocaleString()}
+                                        </p>
+                                    </div>
+                                    {surplusCash > 0 && (
+                                        <div className="mt-2 text-xs font-bold text-emerald-300 flex items-center gap-1">
+                                            <TrendingDown className="w-3 h-3" />
+                                            Save ${Math.round(simMetrics.interestSaved).toLocaleString()}
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-gray-300 text-sm">Debt Free By</p>
-                                    <p className="text-xl font-bold text-emerald-400 mt-1">
-                                        {new Date(new Date().setMonth(new Date().getMonth() + Math.max(...allocationPlan.map(i => i.allocation.monthsToPayoff)))).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                                    </p>
+
+                                {/* Timeline Impact */}
+                                <div className="bg-white/10 p-4 rounded-xl border border-white/5 flex flex-col justify-between">
+                                    <div>
+                                        <p className="text-gray-300 text-xs uppercase font-semibold tracking-wider">
+                                            {simMetrics.timeSaved > 0 ? 'All Debts Cleared' : 'Debt Free By'}
+                                        </p>
+                                        <p className="text-xl font-bold text-white mt-1">
+                                            {simMetrics.payoffDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                                        </p>
+                                    </div>
+                                    {surplusCash > 0 && simMetrics.timeSaved > 0 && (
+                                        <div className="mt-2 text-xs font-bold text-blue-300 flex items-center gap-1">
+                                            <Calendar className="w-3 h-3" />
+                                            {simMetrics.timeSaved} Months Sooner
+                                        </div>
+                                    )}
+                                    {surplusCash > 0 && simMetrics.priorityDebtSaved > 0 && simMetrics.timeSaved === 0 && (
+                                        <div className="mt-2 text-xs font-bold text-blue-300">
+                                            Priority Debt: -{simMetrics.priorityDebtSaved} Mo
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -204,8 +284,18 @@ export default function PayoffPlanView({ debts, advancedSettings, onUpdateDebts 
 
                             {/* Projections based on this plan */}
                             <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                                <div>
-                                    Priority Score: {Math.round(item.priorityScore)} (Rate: {Math.round(item.components.rateScore)} / Time: {Math.round(item.components.timeScore)})
+                                <div className="flex gap-2 items-center">
+                                    <span>Priority Score: {Math.round(item.priorityScore)}</span>
+                                    {allocation.extraPay > 0 && allocation.impact.interestSaved > 0 && (
+                                        <span className="flex items-center gap-1 bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold dark:bg-emerald-900/30 dark:text-emerald-400">
+                                            <TrendingDown className="w-3 h-3" /> Save ${Math.round(allocation.impact.interestSaved).toLocaleString()}
+                                        </span>
+                                    )}
+                                    {allocation.extraPay > 0 && allocation.impact.timeSaved > 0 && (
+                                        <span className="flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold dark:bg-blue-900/30 dark:text-blue-400">
+                                            <Calendar className="w-3 h-3" /> -{allocation.impact.timeSaved} Mo
+                                        </span>
+                                    )}
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <span>Est. Payoff:</span>

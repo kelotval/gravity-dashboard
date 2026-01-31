@@ -383,6 +383,31 @@ export const calculatePriorityScore = (debt, horizonDays = 90) => {
     };
 };
 
+// Helper: Simulate payoff to get precise interest and time
+const simulatePayoff = (debt, monthlyPayment) => {
+    let balance = debt.currentBalance;
+    let totalInterest = 0;
+    let months = 0;
+    const currentRate = getCurrentRate(debt);
+    const monthlyRate = currentRate / 100 / 12;
+
+    // Safety brake for infinite loops (e.g. payment < interest)
+    if (monthlyPayment <= balance * monthlyRate) {
+        return { totalInterest: Infinity, months: 999 };
+    }
+
+    while (balance > 0 && months < 600) { // 50 year cap
+        const interest = balance * monthlyRate;
+        const principal = Math.min(monthlyPayment - interest, balance);
+
+        totalInterest += interest;
+        balance -= principal;
+        months++;
+    }
+
+    return { totalInterest, months };
+};
+
 export const generatePayoffAllocation = (debts, surplusCash, horizonDays = 90) => {
     // 1. Calculate scores
     const scoredDebts = debts.map(d => {
@@ -399,23 +424,22 @@ export const generatePayoffAllocation = (debts, surplusCash, horizonDays = 90) =
         const minPay = d.monthlyRepayment;
         let extraPay = 0;
 
-        // Simple strategy: Pour all surplus into top priority, then next
-        // Assuming surplus is "Extra" on top of mins. 
-        // NOTE: "Start with each debt paying minMonthlyPayment... Remaining = surplusCashMonthly"
-        // So allocation plan shows Total Payment = Min + Extra
-
         if (remainingSurplus > 0) {
-            // For now, dump all surplus into this bucket until debt is cleared?
-            // Since this is a monthly plan, we just allocate the monthly surplus.
-            // We don't simulate months here yet, just "Next Month's Plan".
             extraPay = remainingSurplus;
             remainingSurplus = 0; // All used on top priority
         }
 
-        // Estimate Payoff
-        // Very rough: Balance / (Min + Extra)
         const totalMonthly = minPay + extraPay;
-        const monthsToPayoff = totalMonthly > 0 ? Math.ceil(d.currentBalance / totalMonthly) : 999;
+
+        // 4. Run Simulations
+        // Baseline: paying only minimums
+        const baseline = simulatePayoff(d, minPay);
+
+        // Optimized: paying min + extra
+        const optimized = simulatePayoff(d, totalMonthly);
+
+        const interestSaved = Math.max(baseline.totalInterest - optimized.totalInterest, 0);
+        const timeSaved = Math.max(baseline.months - optimized.months, 0);
 
         return {
             ...d,
@@ -423,7 +447,12 @@ export const generatePayoffAllocation = (debts, surplusCash, horizonDays = 90) =
                 minPay,
                 extraPay,
                 totalPay: totalMonthly,
-                monthsToPayoff
+                monthsToPayoff: optimized.months,
+                projectedInterest: optimized.totalInterest,
+                impact: {
+                    interestSaved,
+                    timeSaved
+                }
             }
         };
     });

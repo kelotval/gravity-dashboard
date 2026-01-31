@@ -14,6 +14,10 @@ import InsightsCard from "./components/InsightsCard";
 import SpendingIntelligence from "./components/SpendingIntelligence";
 import DebtRiskBanner from "./components/DebtRiskBanner";
 import InterestRiskPanel from "./components/InterestRiskPanel";
+import ActionPlanPanel from "./components/ActionPlanPanel";
+import ScenarioSimulator from "./components/ScenarioSimulator";
+import SubscriptionIntelligence from "./components/SubscriptionIntelligence";
+import RelocationScenario from "./components/RelocationScenario";
 import { calculateEffectiveRateState, getDebtRiskBanners, calculateInterestProjections, getCurrentRate } from "./utils/PayoffEngine";
 import AmexCsvImport from "./components/AmexCsvImport";
 import { categorizeTransaction } from "./utils/categorize";
@@ -667,12 +671,42 @@ export default function App() {
             );
         }
 
-        if (currentTab === "trends") {
+        if (currentTab === "scenarios") {
             return (
-                <TrendsView
-                    currentIncome={totalIncome}
-                    currentExpenses={totalExpenses}
-                    currentDebt={totalDebtBalance}
+                <div>
+                    <div className="mb-6">
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                            Scenario Simulator
+                        </h2>
+                        <p className="text-gray-500 dark:text-gray-400">
+                            Test what-if scenarios and see instant impact on your financial metrics
+                        </p>
+                    </div>
+                    <ScenarioSimulator
+                        income={income}
+                        transactions={transactions}
+                        debts={debts}
+                    />
+                </div>
+            );
+        }
+
+        if (currentTab === "subscriptions") {
+            return (
+                <SubscriptionIntelligence
+                    transactions={transactions}
+                    debts={debts}
+                    income={income}
+                />
+            );
+        }
+
+        if (currentTab === "relocation") {
+            return (
+                <RelocationScenario
+                    income={income}
+                    transactions={transactions}
+                    debts={debts}
                 />
             );
         }
@@ -794,6 +828,14 @@ export default function App() {
                         netWorthData={wealthMetrics}
                     />
                 </div>
+
+                {/* 30-Day Action Plan */}
+                <ActionPlanPanel
+                    transactions={transactions}
+                    income={income}
+                    debts={debts}
+                    month={new Date().getMonth()}
+                />
 
                 {/* Key Metrics Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

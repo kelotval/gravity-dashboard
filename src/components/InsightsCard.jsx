@@ -9,23 +9,47 @@ export default function InsightsCard({ transactions, income, debts, savingsRate,
 
         // 1. Savings Insight
         const rate = parseFloat(savingsRate);
+        const fullIncome = Object.values(income).reduce((a, b) => a + b, 0);
+        const totalExpenses = transactions.reduce((acc, tx) => acc + tx.amount, 0);
+        const monthlySavings = fullIncome - totalExpenses;
+
         if (rate >= 20) {
+            const monthsToFund = Math.ceil(15000 / monthlySavings);
+
             list.push({
                 type: "success",
                 icon: CheckCircle,
-                title: "Great Savings Rate",
-                desc: `You're saving ${rate}% of your income. Keep it up!`,
+                observation: `Saving ${rate}% of income`,
+                action: `Set automatic transfer: $${monthlySavings.toLocaleString()}/month`,
+                outcome: `$15K fund in ${monthsToFund} months`,
                 color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-400",
-                action: { type: 'NAVIGATE', target: 'trends', label: 'View Trends' }
+                actionType: { type: 'NAVIGATE', target: 'trends', label: 'View Trends' }
             });
-        } else if (rate < 10) {
+        } else if (rate < 10 && rate >= 0) {
+            const targetSavings = Math.round(fullIncome * 0.2);
+            const gap = targetSavings - monthlySavings;
+
             list.push({
                 type: "warning",
                 icon: AlertCircle,
-                title: "Boost Your Savings",
-                desc: `Your savings rate is ${rate}%. Aim for at least 20%.`,
+                observation: `Only saving ${rate}% (target: 20%)`,
+                action: `Cut $${gap.toLocaleString()}/month from discretionary spending`,
+                outcome: `Reach $${targetSavings.toLocaleString()}/month savings`,
                 color: "text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400",
-                action: { type: 'NAVIGATE', target: 'trends', label: 'Analyze Trends' }
+                actionType: { type: 'NAVIGATE', target: 'trends', label: 'Analyze Trends' }
+            });
+        } else if (rate < 0) {
+            const deficit = totalExpenses - fullIncome;
+            const targetReduction = Math.round(deficit + (fullIncome * 0.1));
+
+            list.push({
+                type: "urgent",
+                icon: AlertCircle,
+                observation: `Spending exceeds income by $${deficit.toLocaleString()}`,
+                action: `URGENT: Cut $${targetReduction.toLocaleString()}/month from expenses`,
+                outcome: `Stop draining $${(deficit * 12).toLocaleString()}/year`,
+                color: "text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400",
+                actionType: { type: 'NAVIGATE', target: 'trends', label: 'Fix Now' }
             });
         }
 
@@ -36,13 +60,17 @@ export default function InsightsCard({ transactions, income, debts, savingsRate,
         }, {});
         const topCategory = Object.entries(categories).sort((a, b) => b[1] - a[1])[0];
         if (topCategory) {
+            const reductionTarget = Math.round(topCategory[1] * 0.2);
+            const annualSavings = reductionTarget * 12;
+
             list.push({
                 type: "info",
                 icon: TrendingDown,
-                title: "Top Expense",
-                desc: `${topCategory[0]} is your highest spending category ($${topCategory[1].toLocaleString()}).`,
+                observation: `Top expense: ${topCategory[0]} ($${topCategory[1].toLocaleString()})`,
+                action: `Find $${reductionTarget.toLocaleString()}/month to cut here`,
+                outcome: `Save $${annualSavings.toLocaleString()}/year`,
                 color: "text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400",
-                action: { type: 'FILTER', payload: topCategory[0], label: `Filter by ${topCategory[0]}` }
+                actionType: { type: 'FILTER', payload: topCategory[0], label: `Filter ${topCategory[0]}` }
             });
         }
 
@@ -51,36 +79,46 @@ export default function InsightsCard({ transactions, income, debts, savingsRate,
         if (totalDebt > 0) {
             const highestInterestDebt = [...debts].sort((a, b) => (b.interestRate || 0) - (a.interestRate || 0))[0];
             if (highestInterestDebt) {
+                const monthlyPayment = highestInterestDebt.monthlyRepayment || 0;
+                const extraPayment = Math.round(monthlyPayment * 0.5);
+
                 list.push({
                     type: "alert",
                     icon: Lightbulb,
-                    title: "Debt Strategy",
-                    desc: `Focus on paying off ${highestInterestDebt.name} first (highest interest).`,
+                    observation: `${highestInterestDebt.name} (highest interest)`,
+                    action: `Pay $${(monthlyPayment + extraPayment).toLocaleString()}/month`,
+                    outcome: `Payoff months faster → Save $1000s`,
                     color: "text-rose-600 bg-rose-50 dark:bg-rose-900/20 dark:text-rose-400",
-                    action: { type: 'NAVIGATE', target: 'payoff', label: 'View Payoff Plan' }
+                    actionType: { type: 'NAVIGATE', target: 'payoff', label: 'View Plan' }
                 });
             } else {
                 list.push({
                     type: "alert",
                     icon: Lightbulb,
-                    title: "Debt Payoff",
-                    desc: `You have ${debts.length} active debts totaling $${totalDebt.toLocaleString()}.`,
+                    observation: `${debts.length} debts ($${totalDebt.toLocaleString()})`,
+                    action: `Review payoff strategy`,
+                    outcome: `Eliminate debt systematically`,
                     color: "text-orange-600 bg-orange-50 dark:bg-orange-900/20 dark:text-orange-400",
-                    action: { type: 'NAVIGATE', target: 'liabilities', label: 'Manage Debts' }
+                    actionType: { type: 'NAVIGATE', target: 'liabilities', label: 'Manage Debts' }
                 });
             }
         }
 
         // 4. Subscription Check (Simple heuristic)
         const subCount = transactions.filter(t => t.category === 'Subscriptions').length;
-        if (subCount > 2) {
+        const subTotal = categories['Subscriptions'] || 0;
+        if (subCount > 2 && subTotal > 0) {
+            const reduction = Math.round(subTotal * 0.3);
+            const annualSavings = reduction * 12;
+
             list.push({
                 type: "warning",
                 icon: AlertCircle,
-                title: "Subscription Alert",
-                desc: `You have ${subCount} active subscriptions. Review them regularly.`,
+                observation: `${subCount} subscriptions ($${subTotal.toLocaleString()}/mo)`,
+                action: `Cancel $${reduction.toLocaleString()}/month in unused services`,
+                outcome: `Recover $${annualSavings.toLocaleString()}/year`,
                 color: "text-purple-600 bg-purple-50 dark:bg-purple-900/20 dark:text-purple-400",
-                action: { type: 'FILTER', payload: 'Subscriptions', label: 'Review Subs' }
+                actionType: { type: 'FILTER', payload: 'Subscriptions', label: 'Review Subs' }
             });
         }
 
@@ -107,23 +145,35 @@ export default function InsightsCard({ transactions, income, debts, savingsRate,
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1 }}
                         key={index}
-                        onClick={() => onAction && onAction(insight.action)}
+                        onClick={() => onAction && onAction(insight.actionType)}
                         className="w-full text-left group p-4 rounded-xl border border-gray-100 bg-white hover:shadow-md transition-all duration-200 dark:bg-gray-700/30 dark:border-gray-700 cursor-pointer"
                     >
                         <div className="flex gap-4">
                             <div className={`p-2 rounded-lg h-fit ${insight.color}`}>
                                 <insight.icon className="w-5 h-5" />
                             </div>
-                            <div className="flex-1">
-                                <h4 className="font-semibold text-gray-900 text-sm mb-1 dark:text-white flex justify-between items-center">
-                                    {insight.title}
-                                    <span className="flex items-center text-xs font-medium text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity dark:text-blue-400">
-                                        {insight.action?.label} <ArrowRight className="w-3 h-3 ml-1" />
-                                    </span>
+                            <div className="flex-1 space-y-2">
+                                {/* Observation */}
+                                <h4 className="font-semibold text-gray-900 text-sm dark:text-white">
+                                    {insight.observation}
                                 </h4>
-                                <p className="text-sm text-gray-500 leading-relaxed dark:text-gray-400 pr-8">
-                                    {insight.desc}
-                                </p>
+
+                                {/* Action */}
+                                <div className="bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1.5 rounded border border-indigo-100 dark:border-indigo-800">
+                                    <p className="text-xs font-semibold text-indigo-900 dark:text-indigo-200">
+                                        → {insight.action}
+                                    </p>
+                                </div>
+
+                                {/* Outcome */}
+                                <div className="flex items-center justify-between">
+                                    <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                                        ✓ {insight.outcome}
+                                    </p>
+                                    <span className="flex items-center text-xs font-medium text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity dark:text-blue-400">
+                                        {insight.actionType?.label} <ArrowRight className="w-3 h-3 ml-1" />
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </motion.button>

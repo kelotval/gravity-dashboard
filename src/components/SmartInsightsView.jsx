@@ -13,6 +13,8 @@ export default function SmartInsightsView({ transactions, income, debts }) {
         const fullIncome = Object.values(income).reduce((a, b) => a + b, 0);
         const totalExpenses = transactions.reduce((acc, tx) => acc + tx.amount, 0);
         const savingsRate = fullIncome > 0 ? ((fullIncome - totalExpenses) / fullIncome) * 100 : 0;
+        const monthlySavings = fullIncome - totalExpenses;
+        const annualSavings = monthlySavings * 12;
 
         // 2. Spending Analysis
         const categoryMap = {};
@@ -27,75 +29,120 @@ export default function SmartInsightsView({ transactions, income, debts }) {
 
         // 4. Debt Check
         const highInterestDebt = debts.find(d => d.accent === 'red');
+        const totalDebt = debts.reduce((acc, d) => acc + d.currentBalance, 0);
 
-        // --- Generate Messages ---
+        // --- Generate Causal Framework Insights ---
 
         // Welcome (Always)
         generatedInsights.push({
             id: 'welcome',
             icon: Sparkles,
             color: 'indigo',
-            title: "Financial Analysis Complete",
-            text: "I've analyzed your current financial snapshot. Here are my observations:"
+            observation: "Financial Analysis Complete",
+            cause: "Your current snapshot has been analyzed across income, spending, debt, and savings patterns",
+            impact: "Understanding these metrics enables data-driven financial decisions",
+            action: "Review each insight below and take recommended actions",
+            outcome: "Optimized financial health and accelerated wealth building"
         });
 
         // Savings Insight
         if (savingsRate > 20) {
+            const monthsToEmergencyFund = Math.ceil(15000 / monthlySavings);
+            const interestIncome = Math.round(annualSavings * 0.03); // Assuming 3% HYSA
+
             generatedInsights.push({
                 id: 'savings-good',
                 icon: TrendingUp,
                 color: 'emerald',
-                title: "Strong Savings Rate",
-                text: `You're saving ${savingsRate.toFixed(1)}% of your income! That's excellent. At this rate, you'll save approx $${((fullIncome - totalExpenses) * 12).toLocaleString()} this year.`
+                observation: `You're saving ${savingsRate.toFixed(1)}% of your income ($${monthlySavings.toLocaleString()}/month)`,
+                cause: "This exceeds the recommended 20% target, indicating strong financial discipline",
+                impact: `At this rate, you'll build a $15,000 emergency fund in ${monthsToEmergencyFund} months and save $${annualSavings.toLocaleString()} annually`,
+                action: `Lock this in: Set automatic transfer of $${monthlySavings.toLocaleString()}/month to a high-yield savings account (3% APY)`,
+                outcome: `$15,000 emergency fund in ${monthsToEmergencyFund} months + $${interestIncome.toLocaleString()} annual interest income`
             });
         } else if (savingsRate > 0) {
+            const targetSavings = Math.round(fullIncome * 0.2);
+            const gap = targetSavings - monthlySavings;
+            const potentialAnnualSavings = targetSavings * 12;
+
             generatedInsights.push({
                 id: 'savings-ok',
                 icon: TrendingUp,
                 color: 'blue',
-                title: "Positive Cash Flow",
-                text: `You're cash flow positive, but saving only ${savingsRate.toFixed(1)}%. Try to target 20% by reducing discretionary spending.`
+                observation: `You're saving ${savingsRate.toFixed(1)}% of income ($${monthlySavings.toLocaleString()}/month)`,
+                cause: "This is below the recommended 20% target, limiting emergency fund growth and investment capacity",
+                impact: "Without increasing savings, you're missing $" + (gap * 12).toLocaleString() + " in annual wealth building",
+                action: `Find $${gap.toLocaleString()}/month to cut from discretionary spending to reach 20% target`,
+                outcome: `Hit $${targetSavings.toLocaleString()}/month savings → $${potentialAnnualSavings.toLocaleString()} annual wealth accumulation`
             });
         } else {
+            const deficit = totalExpenses - fullIncome;
+            const targetReduction = Math.round(deficit + (fullIncome * 0.1)); // Get to 10% savings
+
             generatedInsights.push({
                 id: 'savings-bad',
                 icon: AlertTriangle,
                 color: 'red',
-                title: "Negative Cash Flow",
-                text: `Warning: Expenses exceed income by $${(totalExpenses - fullIncome).toLocaleString()}. Review your budget immediately.`
+                observation: `Expenses exceed income by $${deficit.toLocaleString()}/month`,
+                cause: "Negative cash flow depletes savings and forces reliance on debt",
+                impact: "Continuing this pattern adds $" + (deficit * 12).toLocaleString() + " to debt annually or drains emergency fund",
+                action: `URGENT: Cut $${targetReduction.toLocaleString()}/month from expenses to achieve 10% savings rate`,
+                outcome: `Stop hemorrhaging $${(deficit * 12).toLocaleString()}/year → Establish emergency fund buffer`
             });
         }
 
         // Top Spending Category
         if (topCategory) {
+            const categoryPct = ((topCategory[1] / totalExpenses) * 100).toFixed(0);
+            const reductionTarget = Math.round(topCategory[1] * 0.2); // 20% reduction
+            const annualSavings = reductionTarget * 12;
+
             generatedInsights.push({
                 id: 'category-top',
                 icon: TrendingDown,
                 color: 'orange',
-                title: `Spending Alert: ${topCategory[0]}`,
-                text: `Your highest expense category is ${topCategory[0]} at $${topCategory[1].toLocaleString()}. Is this expected?`
+                observation: `${topCategory[0]} is your highest expense at $${topCategory[1].toLocaleString()}/month (${categoryPct}% of spending)`,
+                cause: "This category dominates your budget and represents your largest optimization opportunity",
+                impact: "A 20% reduction here frees up more cash than cutting any other category",
+                action: `Review all ${topCategory[0]} transactions and identify $${reductionTarget.toLocaleString()}/month in reductions`,
+                outcome: `Save $${annualSavings.toLocaleString()}/year → Redirect to debt payoff or investments`
             });
         }
 
         // Subscriptions
         if (subs > 100) {
+            const reduction = Math.round(subs * 0.3); // Target 30% reduction
+            const annualSavings = reduction * 12;
+
             generatedInsights.push({
                 id: 'subs',
                 icon: Coffee,
                 color: 'purple',
-                title: "Subscription Fatigue",
-                text: `You are spending $${subs.toLocaleString()} on subscriptions monthly. That's $${(subs * 12).toLocaleString()} a year! Consider auditing your unused services.`
+                observation: `You're spending $${subs.toLocaleString()}/month on subscriptions`,
+                cause: "Subscriptions are recurring, auto-renewed expenses that often go unreviewed",
+                impact: "Current trajectory: $" + (subs * 12).toLocaleString() + "/year in subscription costs, many likely unused",
+                action: `Audit all subscriptions today and cancel at least $${reduction.toLocaleString()}/month in unused services`,
+                outcome: `Recover $${annualSavings.toLocaleString()}/year with zero lifestyle impact`
             });
         }
 
         // Debt Strategy
         if (highInterestDebt) {
+            const monthlyPayment = highInterestDebt.monthlyRepayment || 0;
+            const extraPayment = Math.round(monthlyPayment * 0.5); // Suggest 50% increase
+            const currentRate = highInterestDebt.interestRate || 18;
+            const monthlyInterest = Math.round((highInterestDebt.currentBalance * currentRate / 100) / 12);
+            const annualInterestCost = monthlyInterest * 12;
+
             generatedInsights.push({
                 id: 'debt-strategy',
                 icon: AlertTriangle,
                 color: 'rose',
-                title: "High Interest Debt Detected",
-                text: `Focus all extra repayments on "${highInterestDebt.name}" first. It's flagged as high priority (Red). Paying this off quickly will save you the most money.`
+                observation: `"${highInterestDebt.name}" flagged as critical priority (${currentRate}% APR, $${highInterestDebt.currentBalance.toLocaleString()} balance)`,
+                cause: `High interest rate is costing you $${monthlyInterest.toLocaleString()}/month ($${annualInterestCost.toLocaleString()}/year) in interest`,
+                impact: "Every month of delay wastes $" + monthlyInterest.toLocaleString() + " that could build wealth instead",
+                action: `Pay $${(monthlyPayment + extraPayment).toLocaleString()}/month (up from $${monthlyPayment.toLocaleString()}) using freed-up cash from expense cuts`,
+                outcome: `Payoff accelerated by months → Save thousands in lifetime interest`
             });
         }
 
@@ -117,6 +164,77 @@ export default function SmartInsightsView({ transactions, income, debts }) {
                 <p className="text-gray-500 dark:text-gray-400">Smart observations based on your real-time data.</p>
             </div>
 
+            {/* Visual Summary Dashboard */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                {/* Total Insights */}
+                <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl p-4 text-white shadow-lg">
+                    <div className="text-indigo-100 text-xs font-bold uppercase tracking-wider mb-1">Total Insights</div>
+                    <div className="text-3xl font-bold mb-1">{insights.length - 1}</div>
+                    <div className="text-indigo-200 text-xs leading-tight">
+                        {insights.length - 1 === 0 ? 'No recommendations' :
+                            insights.length - 1 === 1 ? '1 actionable recommendation' :
+                                `${insights.length - 1} actionable recommendations`}
+                    </div>
+                </div>
+
+                {/* Critical Issues */}
+                <div className="bg-gradient-to-br from-red-500 to-rose-600 rounded-xl p-4 text-white shadow-lg">
+                    <div className="text-red-100 text-xs font-bold uppercase tracking-wider mb-1">Critical Issues</div>
+                    <div className="text-3xl font-bold mb-1">
+                        {insights.filter(i => i.color === 'red' || i.color === 'rose').length}
+                    </div>
+                    <div className="text-red-200 text-xs leading-tight">
+                        {(() => {
+                            const count = insights.filter(i => i.color === 'red' || i.color === 'rose').length;
+                            return count === 0 ? 'No urgent actions needed' :
+                                count === 1 ? 'Requires immediate action' :
+                                    `${count} items need urgent attention`;
+                        })()}
+                    </div>
+                </div>
+
+                {/* Savings Opportunities */}
+                <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-4 text-white shadow-lg">
+                    <div className="text-emerald-100 text-xs font-bold uppercase tracking-wider mb-1">Savings Rate</div>
+                    <div className="text-3xl font-bold mb-1">
+                        {(() => {
+                            const fullIncome = Object.values(income).reduce((a, b) => a + b, 0);
+                            const totalExpenses = transactions.reduce((acc, tx) => acc + tx.amount, 0);
+                            const savingsRate = fullIncome > 0 ? ((fullIncome - totalExpenses) / fullIncome) * 100 : 0;
+                            return savingsRate >= 0 ? `${Math.round(savingsRate)}%` : '0%';
+                        })()}
+                    </div>
+                    <div className="text-emerald-200 text-xs leading-tight">
+                        {(() => {
+                            const fullIncome = Object.values(income).reduce((a, b) => a + b, 0);
+                            const totalExpenses = transactions.reduce((acc, tx) => acc + tx.amount, 0);
+                            const savingsRate = fullIncome > 0 ? ((fullIncome - totalExpenses) / fullIncome) * 100 : 0;
+                            return savingsRate > 20 ? 'Excellent! Above target' :
+                                savingsRate > 10 ? 'Good, room to improve' :
+                                    savingsRate > 0 ? 'Below 20% target' :
+                                        'Spending exceeds income';
+                        })()}
+                    </div>
+                </div>
+
+                {/* Debt Focus */}
+                <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-4 text-white shadow-lg">
+                    <div className="text-orange-100 text-xs font-bold uppercase tracking-wider mb-1">High-Interest Debt</div>
+                    <div className="text-3xl font-bold mb-1">
+                        {debts.filter(d => d.accent === 'red').length}
+                    </div>
+                    <div className="text-orange-200 text-xs leading-tight">
+                        {(() => {
+                            const count = debts.filter(d => d.accent === 'red').length;
+                            const total = debts.length;
+                            return count === 0 ? (total === 0 ? 'No active debts' : 'No critical debts') :
+                                count === 1 ? 'Focus on 1 priority debt' :
+                                    `${count} debts need focus`;
+                        })()}
+                    </div>
+                </div>
+            </div>
+
             <div className="space-y-4">
                 {insights.map((insight, index) => (
                     <div
@@ -127,9 +245,36 @@ export default function SmartInsightsView({ transactions, income, debts }) {
                         <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center bg-${insight.color}-50 text-${insight.color}-600 dark:bg-${insight.color}-900/30 dark:text-${insight.color}-400`}>
                             <insight.icon className="w-6 h-6" />
                         </div>
-                        <div>
-                            <h4 className="font-bold text-gray-900 mb-1 dark:text-white">{insight.title}</h4>
-                            <p className="text-gray-600 leading-relaxed dark:text-gray-300">{insight.text}</p>
+                        <div className="flex-1 space-y-3">
+                            {/* Observation */}
+                            <div>
+                                <div className="text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1">Observation</div>
+                                <h4 className="font-bold text-gray-900 dark:text-white">{insight.observation}</h4>
+                            </div>
+
+                            {/* Cause */}
+                            <div className="pl-4 border-l-2 border-gray-200 dark:border-gray-700">
+                                <div className="text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1">Why It Matters</div>
+                                <p className="text-sm text-gray-600 dark:text-gray-300">{insight.cause}</p>
+                            </div>
+
+                            {/* Impact */}
+                            <div className="pl-4 border-l-2 border-orange-200 dark:border-orange-800">
+                                <div className="text-[10px] uppercase tracking-wider font-bold text-orange-600 dark:text-orange-400 mb-1">If Unchanged</div>
+                                <p className="text-sm text-gray-700 font-medium dark:text-gray-200">{insight.impact}</p>
+                            </div>
+
+                            {/* Action */}
+                            <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg border border-indigo-100 dark:border-indigo-800">
+                                <div className="text-[10px] uppercase tracking-wider font-bold text-indigo-600 dark:text-indigo-400 mb-1">Action Step</div>
+                                <p className="text-sm font-semibold text-indigo-900 dark:text-indigo-200">{insight.action}</p>
+                            </div>
+
+                            {/* Outcome */}
+                            <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-lg border border-emerald-100 dark:border-emerald-800">
+                                <div className="text-[10px] uppercase tracking-wider font-bold text-emerald-600 dark:text-emerald-400 mb-1">Expected Outcome</div>
+                                <p className="text-sm font-bold text-emerald-900 dark:text-emerald-200">{insight.outcome}</p>
+                            </div>
                         </div>
                     </div>
                 ))}

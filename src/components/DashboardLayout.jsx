@@ -1,5 +1,5 @@
 import React from "react";
-import { LayoutDashboard, CreditCard, PieChart, Settings, Menu, Wallet, Moon, Sun, Calendar, LineChart, Sparkles } from "lucide-react";
+import { LayoutDashboard, CreditCard, PieChart, Settings, Menu, Wallet, Moon, Sun, Calendar, LineChart, Sparkles, Sliders, Globe } from "lucide-react";
 import clsx from "clsx";
 
 export default function DashboardLayout({ children, currentTab, onTabChange }) {
@@ -33,7 +33,9 @@ export default function DashboardLayout({ children, currentTab, onTabChange }) {
         { id: "overview", icon: LayoutDashboard, label: "Overview" },
         { id: "liabilities", icon: Wallet, label: "Active Liabilities" },
         { id: "payoff", icon: Calendar, label: "Payoff Plan" },
-        { id: "trends", icon: LineChart, label: "Trends" },
+        { id: "scenarios", icon: Sliders, label: "Scenarios" },
+        { id: "subscriptions", icon: CreditCard, label: "Subscriptions" },
+        { id: "relocation", icon: Globe, label: "Relocation" },
         { id: "insights", icon: Sparkles, label: "Insights" },
         { id: "transactions", icon: CreditCard, label: "Transactions" },
         { id: "settings", icon: Settings, label: "Settings" },

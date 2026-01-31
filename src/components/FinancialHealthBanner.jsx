@@ -65,39 +65,141 @@ export default function FinancialHealthBanner({ score, breakdown, savingsRate, d
                         </button>
                     </div>
 
-                    {/* Center: Circular Progress */}
+                    {/* Center: Animated Speedometer Gauge */}
                     <div className="relative flex items-center justify-center">
                         <svg
-                            height={radius * 2.5}
-                            width={radius * 2.5}
-                            className="transform -rotate-90 drop-shadow-2xl"
+                            width="240"
+                            height="180"
+                            viewBox="0 0 240 180"
+                            className="drop-shadow-2xl"
                         >
-                            <circle
+                            <defs>
+                                {/* Gradient for gauge background */}
+                                <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stopColor="#ef4444" />
+                                    <stop offset="50%" stopColor="#fbbf24" />
+                                    <stop offset="100%" stopColor="#10b981" />
+                                </linearGradient>
+
+                                {/* Glow filter */}
+                                <filter id="glow">
+                                    <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+                                    <feMerge>
+                                        <feMergeNode in="coloredBlur" />
+                                        <feMergeNode in="SourceGraphic" />
+                                    </feMerge>
+                                </filter>
+
+                                {/* Needle gradient */}
+                                <linearGradient id="needleGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" stopColor="#ffffff" stopOpacity="0.9" />
+                                    <stop offset="100%" stopColor="#e5e7eb" stopOpacity="0.7" />
+                                </linearGradient>
+                            </defs>
+
+                            {/* Gauge Background Arc */}
+                            <path
+                                d="M 40 130 A 80 80 0 0 1 200 130"
+                                fill="none"
                                 stroke="rgba(255,255,255,0.1)"
-                                strokeWidth={stroke}
-                                fill="transparent"
-                                r={normalizedRadius}
-                                cx={radius * 1.25}
-                                cy={radius * 1.25}
+                                strokeWidth="20"
+                                strokeLinecap="round"
+                            />
+
+                            {/* Colored Gauge Arc with Gradient */}
+                            <path
+                                d="M 40 130 A 80 80 0 0 1 200 130"
+                                fill="none"
+                                stroke="url(#gaugeGradient)"
+                                strokeWidth="20"
+                                strokeLinecap="round"
+                                strokeDasharray={`${(progress / 100) * 251} 251`}
+                                style={{
+                                    transition: 'stroke-dasharray 1.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    filter: 'url(#glow)'
+                                }}
+                            />
+
+                            {/* Tick Marks */}
+                            {[0, 20, 40, 60, 80, 100].map((tick) => {
+                                const angle = -180 + (tick / 100) * 180;
+                                const radians = (angle * Math.PI) / 180;
+                                const x1 = 120 + 70 * Math.cos(radians);
+                                const y1 = 130 + 70 * Math.sin(radians);
+                                const x2 = 120 + 80 * Math.cos(radians);
+                                const y2 = 130 + 80 * Math.sin(radians);
+
+                                return (
+                                    <g key={tick}>
+                                        <line
+                                            x1={x1}
+                                            y1={y1}
+                                            x2={x2}
+                                            y2={y2}
+                                            stroke="rgba(255,255,255,0.4)"
+                                            strokeWidth="2"
+                                        />
+                                        <text
+                                            x={120 + 105 * Math.cos(radians)}
+                                            y={130 + 105 * Math.sin(radians) + 5}
+                                            fill="rgba(255,255,255,0.8)"
+                                            fontSize="12"
+                                            fontWeight="600"
+                                            textAnchor="middle"
+                                        >
+                                            {tick}
+                                        </text>
+                                    </g>
+                                );
+                            })})
+
+                            {/* Animated Needle */}
+                            <g
+                                style={{
+                                    transformOrigin: '120px 130px',
+                                    transform: `rotate(${-90 + (progress / 100) * 180}deg)`,
+                                    transition: 'transform 1.5s cubic-bezier(0.4, 0, 0.2, 1)'
+                                }}
+                            >
+                                <polygon
+                                    points="120,65 115,125 120,128 125,125"
+                                    fill="url(#needleGradient)"
+                                    stroke="#fff"
+                                    strokeWidth="1"
+                                    filter="url(#glow)"
+                                />
+                            </g>
+
+                            {/* Center Hub */}
+                            <circle
+                                cx="120"
+                                cy="130"
+                                r="8"
+                                fill="#fff"
+                                stroke="#e5e7eb"
+                                strokeWidth="2"
+                                filter="url(#glow)"
                             />
                             <circle
-                                stroke={strokeColor}
-                                strokeWidth={stroke}
-                                strokeDasharray={circumference + " " + circumference}
-                                style={{ strokeDashoffset, transition: "stroke-dashoffset 1.5s ease-in-out" }}
-                                strokeLinecap="round"
-                                fill="transparent"
-                                r={normalizedRadius}
-                                cx={radius * 1.25}
-                                cy={radius * 1.25}
+                                cx="120"
+                                cy="130"
+                                r="4"
+                                fill={strokeColor}
                             />
                         </svg>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <span className={`text-4xl font-extrabold ${colorClass} drop-shadow-sm`}>
-                                {progress}
-                            </span>
-                            <span className="text-xs font-semibold text-blue-100 uppercase tracking-widest mt-1">
-                                / 100
+
+                        {/* Score Display Below Gauge */}
+                        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-7 flex flex-col items-center">
+                            <div className="flex items-baseline justify-center gap-1">
+                                <span className={`text-5xl font-extrabold ${colorClass} drop-shadow-lg`}>
+                                    {progress}
+                                </span>
+                                <span className="text-lg font-bold text-blue-100 opacity-60">
+                                    /100
+                                </span>
+                            </div>
+                            <span className="text-xs font-semibold text-blue-100 uppercase tracking-widest mt-1 text-center">
+                                Health Score
                             </span>
                         </div>
                     </div>
