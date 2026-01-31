@@ -90,10 +90,15 @@ export default function TransactionList({ transactions, onDelete, onEdit, groupB
         }, {});
 
         // Sort: Uncategorized last, then alphabetical
-        const sortedEntries = Object.entries(grouped).sort(([a], [b]) => {
-            if (a === "Uncategorized") return 1;
-            if (b === "Uncategorized") return -1;
-            return a.localeCompare(b);
+        // Sort: By item count (Ascending), then Alphabetical
+        // Goal: "Smallest amount of items at the beginning"
+        const sortedEntries = Object.entries(grouped).sort(([catA, txsA], [catB, txsB]) => {
+            // Primary Sort: Count (Ascending)
+            const countDiff = txsA.length - txsB.length;
+            if (countDiff !== 0) return countDiff;
+
+            // Secondary Sort: Alphabetical
+            return catA.localeCompare(catB);
         });
 
         const isEmpty = filteredTransactions.length === 0;
