@@ -14,7 +14,7 @@ import InsightsCard from "./components/InsightsCard";
 import SpendingIntelligence from "./components/SpendingIntelligence";
 import DebtRiskBanner from "./components/DebtRiskBanner";
 import InterestRiskPanel from "./components/InterestRiskPanel";
-import { calculateEffectiveRateState, getDebtRiskBanners, calculateInterestProjections } from "./utils/PayoffEngine";
+import { calculateEffectiveRateState, getDebtRiskBanners, calculateInterestProjections, getCurrentRate } from "./utils/PayoffEngine";
 import AmexCsvImport from "./components/AmexCsvImport";
 import { categorizeTransaction } from "./utils/categorize";
 import { calculateDetailedHealthScore } from "./utils/healthScore";
@@ -356,6 +356,52 @@ export default function App() {
         netSavings,
         totalIncome
     });
+
+    // ---------------------------------------------
+    // Wealth Trajectory Engine
+    // ---------------------------------------------
+    const wealthMetrics = useMemo(() => {
+        // 1. Calculate Monthly Interest Burn
+        const monthlyInterestCost = debts.reduce((acc, debt) => {
+            const rate = getCurrentRate(debt);
+            return acc + (debt.currentBalance * (rate / 100)) / 12;
+        }, 0);
+
+        // 2. Calculate Principal Velocity (Repayment - Interest)
+        // Note: totalMonthlyDebt is sum of ALL payments
+        const monthlyPrincipalPaid = Math.max(totalMonthlyDebt - monthlyInterestCost, 0);
+
+        // 3. Total Net Worth Velocity (Net Savings + Principal Reduction)
+        // Net Savings = Income - Expenses ( Expenses includes the FULL debt payment )
+        // So: Change in Cash = Net Savings
+        // Change in Debt = -PrincipalPaid
+        // Change in NW = Change in Cash + Change in Debt (where Debt is negative liability)
+        //              = Net Savings + PrincipalPaid
+        // This is correct: Expenses (Cash Out) - Principal (Liability Down) = Interest (Expense)
+        // Alternatively: NW Change = Income - (Expenses - Principal) - Interest === Income - Interest - (Other Expenses)
+        // Simplified: NW Change = Net Savings + PrincipalPaid
+        const monthlyVelocity = netSavings + monthlyPrincipalPaid;
+
+        // 4. Projections
+        const projected6Mo = netWorth + (monthlyVelocity * 6);
+        const projected1Year = netWorth + (monthlyVelocity * 12);
+
+        // 5. Crossover Date (if negative)
+        let monthsToPositive = null;
+        if (netWorth < 0 && monthlyVelocity > 0) {
+            monthsToPositive = Math.abs(netWorth / monthlyVelocity);
+        }
+
+        return {
+            netWorth,
+            monthlyVelocity,
+            monthlyPrincipalPaid,
+            monthlyInterestCost,
+            projected6Mo,
+            projected1Year,
+            monthsToPositive
+        };
+    }, [netWorth, netSavings, debts, totalMonthlyDebt]);
 
     // 2. Event Handlers
     const handleSaveTransaction = (txData) => {
@@ -745,7 +791,7 @@ export default function App() {
                         breakdown={healthBreakdown}
                         savingsRate={savingsRate}
                         dtiRatio={dtiRatio}
-                        netWorth={netWorth}
+                        netWorthData={wealthMetrics}
                     />
                 </div>
 

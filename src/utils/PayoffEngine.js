@@ -18,37 +18,68 @@ export const getCurrentRate = (debt) => {
     return debt.interestRate || 0;
 };
 
-// Generate warnings for upcoming rate hikes (within 90 days)
+// Generate smart signals/alerts based on severity
 export const getRateWarnings = (debts) => {
     const today = new Date();
     const ninetyDaysOut = new Date();
     ninetyDaysOut.setDate(today.getDate() + 90);
 
-    const warnings = [];
+    const alerts = [];
 
     debts.forEach(debt => {
-        if (!debt.futureRates) return;
+        const currentRate = getCurrentRate(debt);
 
-        debt.futureRates.forEach(rateConfig => {
-            const rateDate = new Date(rateConfig.date);
-            if (rateDate > today && rateDate <= ninetyDaysOut) {
-                // If the new rate is significantly higher (> 2% jump) or jumping from 0
-                const currentRate = getCurrentRate(debt);
-                if (rateConfig.rate > currentRate) {
+        // 1. Rate Change Alerts
+        if (debt.futureRates) {
+            debt.futureRates.forEach(rateConfig => {
+                const rateDate = new Date(rateConfig.date);
+                if (rateDate > today && rateDate <= ninetyDaysOut) {
                     const days = Math.ceil((rateDate - today) / (1000 * 60 * 60 * 24));
-                    warnings.push({
-                        debtId: debt.id,
-                        debtName: debt.name,
-                        message: `Rate jumps to ${rateConfig.rate}% in ${days} days!`,
-                        severity: "high",
-                        action: "Payoff Priority"
-                    });
+                    const isHike = rateConfig.rate > currentRate;
+
+                    if (isHike) {
+                        const delta = rateConfig.rate - currentRate;
+                        const validDelta = Math.max(delta, 0);
+                        const monthlyImpact = (debt.currentBalance * (validDelta / 100)) / 12;
+
+                        alerts.push({
+                            type: 'RATE_HIKE',
+                            severity: days <= 30 ? 'critical' : 'warning',
+                            label: days <= 30 ? 'Rate Hike Imminent' : 'Upcoming Rate Change',
+                            debtName: debt.name,
+                            message: `Interest rate jumping from ${currentRate}% to ${rateConfig.rate}%.`,
+                            action: days <= 30 ? 'Refinance / Payoff' : 'Plan Payoff',
+                            impact: monthlyImpact > 0 ? `+$${Math.round(monthlyImpact)}/mo interest` : null,
+                            timeframe: `${days} days`
+                        });
+                    }
                 }
+            });
+        }
+
+        // 2. High Cost Debt Alerts (Active)
+        if (currentRate >= 18) {
+            // Only alert if we haven't already flagged a critical rate hike for this debt
+            const hasRateHike = alerts.some(a => a.debtName === debt.name && a.type === 'RATE_HIKE');
+            if (!hasRateHike) {
+                const monthlyBurn = (debt.currentBalance * (currentRate / 100)) / 12;
+                alerts.push({
+                    type: 'HIGH_INTEREST',
+                    severity: 'critical',
+                    label: 'High Interest Drain',
+                    debtName: debt.name,
+                    message: `You are paying ${currentRate}% interest on this balance.`,
+                    action: 'Target Priority',
+                    impact: `-$${Math.round(monthlyBurn)}/mo waste`,
+                    timeframe: 'Immediate'
+                });
             }
-        });
+        }
     });
 
-    return warnings;
+    // Sort by severity (Critical > Warning > Info)
+    const severityScore = { critical: 3, warning: 2, info: 1 };
+    return alerts.sort((a, b) => severityScore[b.severity] - severityScore[a.severity]);
 };
 
 // Calculate payoff order and projections

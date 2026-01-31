@@ -3,7 +3,7 @@ import { TrendingUp, TrendingDown, HelpCircle, Info } from "lucide-react";
 import clsx from "clsx";
 import Tooltip from "./Tooltip";
 
-export default function FinancialHealthBanner({ score, breakdown, savingsRate, dtiRatio, netWorth }) {
+export default function FinancialHealthBanner({ score, breakdown, savingsRate, dtiRatio, netWorthData }) {
     // Animation state for SVG circle
     const [progress, setProgress] = useState(0);
 
@@ -102,17 +102,48 @@ export default function FinancialHealthBanner({ score, breakdown, savingsRate, d
                         </div>
                     </div>
 
-                    {/* Right: Net Worth */}
+                    {/* Right: Wealth Trajectory */}
                     <div className="flex-1 text-center md:text-right hidden md:block">
-                        <div className="inline-block bg-white/5 rounded-2xl p-6 border border-white/10 shadow-inner backdrop-blur-md">
-                            <div className="text-sm text-blue-200 font-medium mb-1 uppercase tracking-wide">Net Worth</div>
-                            <div className="text-4xl font-bold tracking-tight text-white mb-2">
-                                ${netWorth.toLocaleString()}
+                        <div className="inline-block bg-white/5 rounded-2xl p-6 border border-white/10 shadow-inner backdrop-blur-md min-w-[240px]">
+                            <div className="flex justify-between items-center mb-1 gap-4">
+                                <div className="text-sm text-blue-200 font-medium uppercase tracking-wide">Net Worth</div>
+                                {netWorthData.monthlyVelocity > 0 ? (
+                                    <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1">
+                                        <TrendingUp className="w-3 h-3" /> +${Math.round(netWorthData.monthlyVelocity).toLocaleString()}/mo
+                                    </span>
+                                ) : (
+                                    <span className="text-[10px] font-bold bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-full border border-rose-500/30 flex items-center gap-1">
+                                        <TrendingDown className="w-3 h-3" /> -${Math.round(Math.abs(netWorthData.monthlyVelocity)).toLocaleString()}/mo
+                                    </span>
+                                )}
                             </div>
-                            <div className="flex items-center justify-center md:justify-end gap-2 text-xs font-medium text-emerald-300">
-                                <TrendingUp className="w-3 h-3" />
-                                <span>Trending Up</span>
+
+                            <div className="text-4xl font-bold tracking-tight text-white mb-3">
+                                ${netWorthData.netWorth.toLocaleString()}
                             </div>
+
+                            {/* Projections Mini-View */}
+                            <div className="space-y-1.5 border-t border-white/10 pt-2">
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className="text-blue-200/60">6 Month Forecast</span>
+                                    <span className={`font-mono font-medium ${netWorthData.projected6Mo >= 0 ? 'text-emerald-300' : 'text-white/80'}`}>
+                                        ${Math.round(netWorthData.projected6Mo).toLocaleString()}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className="text-blue-200/60">1 Year Forecast</span>
+                                    <span className={`font-mono font-medium ${netWorthData.projected1Year >= 0 ? 'text-emerald-300' : 'text-white/80'}`}>
+                                        ${Math.round(netWorthData.projected1Year).toLocaleString()}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Crossover Date */}
+                            {netWorthData.netWorth < 0 && netWorthData.monthsToPositive && (
+                                <div className="mt-3 text-[10px] font-bold text-center bg-blue-500/20 text-blue-200 py-1 rounded border border-blue-500/30">
+                                    Net Positive in {Math.ceil(netWorthData.monthsToPositive)} months
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

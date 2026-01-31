@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Wallet, Car, AlertCircle, TrendingUp, AlertTriangle, ArrowRight } from "lucide-react";
+import { Wallet, Car, AlertCircle, TrendingUp, AlertTriangle, ArrowRight, Info } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
 import { getRateWarnings, calculatePayoffStrategy, getCurrentRate, deriveDebtStatus, calculateEffectiveRateState } from "../utils/PayoffEngine";
 import kiaImage from "../assets/kia_sportage.png";
@@ -112,13 +112,51 @@ export default function ActiveLiabilities({ debts, onUpdateDebts, advancedSettin
                     </h4>
 
                     <div className="flex-1 overflow-y-auto space-y-3">
-                        {warnings.map((warn, i) => (
-                            <div key={i} className="bg-red-50 p-3 rounded-lg border border-red-100 dark:bg-red-900/20 dark:border-red-800">
+                        {warnings.map((alert, i) => (
+                            <div key={i} className={`p-3 rounded-lg border ${alert.severity === 'critical' ? 'bg-red-50 border-red-100 dark:bg-red-900/20 dark:border-red-800' :
+                                alert.severity === 'warning' ? 'bg-orange-50 border-orange-100 dark:bg-orange-900/20 dark:border-orange-800' :
+                                    'bg-blue-50 border-blue-100 dark:bg-blue-900/20 dark:border-blue-800'
+                                }`}>
                                 <div className="flex items-start gap-3">
-                                    <AlertTriangle className="w-4 h-4 text-red-600 mt-1 dark:text-red-400 flex-shrink-0" />
-                                    <div>
-                                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{warn.debtName}</p>
-                                        <p className="text-xs text-red-600 dark:text-red-400 font-medium">{warn.message}</p>
+                                    {alert.severity === 'critical' ? (
+                                        <AlertTriangle className="w-4 h-4 text-red-600 mt-1 dark:text-red-400 flex-shrink-0" />
+                                    ) : alert.severity === 'warning' ? (
+                                        <AlertCircle className="w-4 h-4 text-orange-600 mt-1 dark:text-orange-400 flex-shrink-0" />
+                                    ) : (
+                                        <Info className="w-4 h-4 text-blue-600 mt-1 dark:text-blue-400 flex-shrink-0" />
+                                    )}
+                                    <div className="flex-1">
+                                        <div className="flex justify-between items-start">
+                                            <h5 className={`text-xs font-bold uppercase tracking-wide mb-0.5 ${alert.severity === 'critical' ? 'text-red-700 dark:text-red-300' :
+                                                alert.severity === 'warning' ? 'text-orange-700 dark:text-orange-300' :
+                                                    'text-blue-700 dark:text-blue-300'
+                                                }`}>
+                                                {alert.label}
+                                            </h5>
+                                            {alert.timeframe && (
+                                                <span className="text-[10px] bg-white/50 px-1.5 py-0.5 rounded font-mono font-medium text-gray-600 dark:text-gray-300">
+                                                    {alert.timeframe}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">{alert.debtName}</p>
+                                        <p className="text-xs text-gray-600 dark:text-gray-400 leading-snug">{alert.message}</p>
+
+                                        {(alert.action || alert.impact) && (
+                                            <div className="mt-2 pt-2 border-t border-black/5 flex items-center justify-between gap-2">
+                                                {alert.action && (
+                                                    <span className="text-[10px] font-bold px-2 py-0.5 bg-white rounded border border-gray-200 text-gray-700 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300">
+                                                        {alert.action}
+                                                    </span>
+                                                )}
+                                                {alert.impact && (
+                                                    <span className="text-[10px] font-mono font-bold text-red-600 dark:text-red-400">
+                                                        {alert.impact}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
