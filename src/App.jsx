@@ -21,6 +21,225 @@ import { categorizeTransaction } from "./utils/categorize";
 import { DEFAULT_STATE } from "./data";
 import { DollarSign, TrendingDown, PiggyBank, Wallet, Plus, RefreshCw } from "lucide-react";
 
+// Extensive Categorization Rules (Australian Context)
+const DEFAULT_CATEGORY_RULES = [
+    // -----------------------
+    // Transfers (must be early)
+    // -----------------------
+    {
+        category: "Transfers",
+        keywords: [
+            "transfer", "internet transfer", "osko", "pay anyone", "direct credit",
+            "bpay", "payment received", "salary", "payroll", "reimbursement",
+            "credit", "refund", "reversal"
+        ]
+    },
+
+    // -----------------------
+    // Fees and Interest (early)
+    // -----------------------
+    {
+        category: "Fees and Interest",
+        keywords: [
+            "interest", "late fee", "annual fee", "finance charge",
+            "foreign transaction fee", "fx fee", "overlimit", "fee"
+        ]
+    },
+
+    // -----------------------
+    // Housing
+    // -----------------------
+    {
+        category: "Housing",
+        keywords: [
+            "rent", "mortgage", "strata", "property management", "real estate",
+            "council rates", "water rates", "body corporate"
+        ]
+    },
+
+    // -----------------------
+    // Groceries
+    // -----------------------
+    {
+        category: "Groceries",
+        keywords: [
+            "woolworths", "coles", "aldi", "iga", "harris farm", "costco",
+            "foodland", "spar", "supabarn", "drakes", "fresh choice",
+            "butcher", "fruit shop", "greengrocer", "seafood"
+        ]
+    },
+
+    // -----------------------
+    // Dining Out
+    // -----------------------
+    {
+        category: "Dining Out",
+        keywords: [
+            "restaurant", "bistro", "eatery", "dining", "pub", "hotel bar",
+            "mcdonald", "kfc", "hungry jack", "burger", "pizza", "dominos",
+            "subway", "sushi", "grill", "nandos", "oporto", "guzman", "zambrero",
+            "red rooster", "thai", "ramen", "kebab", "dumpling"
+        ]
+    },
+
+    // -----------------------
+    // Coffee
+    // -----------------------
+    {
+        category: "Coffee",
+        keywords: [
+            "cafe", "coffee", "espresso", "barista", "mccafe",
+            "starbucks", "gloria jeans", "zarraffas", "campos", "single o"
+        ]
+    },
+
+    // -----------------------
+    // Fuel
+    // -----------------------
+    {
+        category: "Fuel",
+        keywords: [
+            "bp", "shell", "caltex", "ampol", "mobil", "7-eleven fuel", "7 eleven fuel",
+            "united petroleum", "liberty", "metro petroleum", "petrol", "fuel"
+        ]
+    },
+
+    // -----------------------
+    // Transport
+    // -----------------------
+    {
+        category: "Transport",
+        keywords: [
+            // Rideshare / taxis
+            "uber trip", "uber", "didi", "ola", "taxi", "13cabs",
+
+            // Public transport
+            "opal", "myki", "transportfornsw", "transport for nsw", "translink",
+
+            // Parking / tolls
+            "linkt", "e-toll", "etoll", "toll", "wilson parking", "secure parking"
+        ]
+    },
+
+    // -----------------------
+    // Utilities
+    // -----------------------
+    {
+        category: "Utilities",
+        keywords: [
+            "agl", "origin", "energy australia", "red energy", "alinta",
+            "electricity", "gas", "internet", "broadband",
+            "telstra", "optus", "vodafone", "aussie broadband", "tpg", "iiNet",
+            "sydney water", "water corporation", "unitywater"
+        ]
+    },
+
+    // -----------------------
+    // Subscriptions (use statement patterns, avoid plain "apple"/"google")
+    // -----------------------
+    {
+        category: "Subscriptions",
+        keywords: [
+            "apple.com/bill", "itunes", "app store",
+            "prime vide", "amazon prime", "netflix", "spotify",
+            "disney", "binge", "kayo", "stan", "paramount", "youtube premium",
+            "audible", "playstation network", "xbox", "nintendo",
+            "openai", "chatgpt"
+        ]
+    },
+
+    // -----------------------
+    // Health
+    // -----------------------
+    {
+        category: "Health",
+        keywords: [
+            "chemist", "pharmacy", "chemist warehouse", "priceline", "terrywhite",
+            "doctor", "medical", "dental", "dentist", "pathology", "radiology",
+            "physio", "chiro", "optometrist"
+        ]
+    },
+
+    // -----------------------
+    // Insurance
+    // -----------------------
+    {
+        category: "Insurance",
+        keywords: [
+            "nrma", "aami", "allianz", "gio", "youi", "budget direct",
+            "racv", "racq", "nib", "bupa", "medibank", "hcf"
+        ]
+    },
+
+    // -----------------------
+    // Shopping
+    // -----------------------
+    {
+        category: "Shopping",
+        keywords: [
+            "amazon", "ebay", "kmart", "big w", "target", "myer", "david jones",
+            "jb hi-fi", "officeworks", "kogan", "the good guys", "harvey norman",
+            "uniqlo", "zara", "h&m", "cotton on", "shein", "temu"
+        ]
+    },
+
+    // -----------------------
+    // Home and Garden
+    // -----------------------
+    {
+        category: "Home and Garden",
+        keywords: [
+            "bunnings", "ikea", "mitre 10", "stratco", "freedom", "fantastic furniture",
+            "spotlight", "nursery", "garden", "hardware"
+        ]
+    },
+
+    // -----------------------
+    // Entertainment
+    // -----------------------
+    {
+        category: "Entertainment",
+        keywords: [
+            "event cinemas", "hoyts", "imax", "cinema", "theatre",
+            "ticketek", "ticketmaster",
+            "steam", "epic games", "playstation store", "xbox store"
+        ]
+    },
+
+    // -----------------------
+    // Travel
+    // -----------------------
+    {
+        category: "Travel",
+        keywords: [
+            "qantas", "virgin", "jetstar", "emirates", "singapore airlines",
+            "airbnb", "booking.com", "expedia", "hotel", "resort",
+            "airalo", "travel"
+        ]
+    },
+
+    // -----------------------
+    // Gifts
+    // -----------------------
+    {
+        category: "Gifts",
+        keywords: [
+            "gift", "flowers", "florist", "gift card"
+        ]
+    },
+
+    // -----------------------
+    // Education
+    // -----------------------
+    {
+        category: "Education",
+        keywords: [
+            "course", "training", "udemy", "coursera", "pluralsight", "linkedin learning",
+            "university", "tafe"
+        ]
+    },
+];
+
 const STORAGE_KEY = "er_finance_state_v1";
 
 function loadStored() {
@@ -55,6 +274,7 @@ export default function App() {
         payoffByDate: false,
         aiInsights: false
     });
+    const [categoryRules, setCategoryRules] = useState(stored?.categoryRules ?? DEFAULT_CATEGORY_RULES);
     const [saveStatus, setSaveStatus] = useState("Saved");
     const [hasLoadedCloud, setHasLoadedCloud] = useState(false);
 
@@ -84,7 +304,7 @@ export default function App() {
     useEffect(() => {
         if (!hasLoadedCloud) return;
 
-        const payload = { transactions, income, debts, profile, advancedSettings };
+        const payload = { transactions, income, debts, profile, advancedSettings, categoryRules };
         saveStored(payload);
 
         setSaveStatus("Saving...");
@@ -104,7 +324,7 @@ export default function App() {
         }, 800);
 
         return () => clearTimeout(t);
-    }, [transactions, income, debts, profile, advancedSettings, hasLoadedCloud]);
+    }, [transactions, income, debts, profile, advancedSettings, categoryRules, hasLoadedCloud]);
 
 
 
@@ -138,6 +358,46 @@ export default function App() {
 
     // 2. Event Handlers
     const handleSaveTransaction = (txData) => {
+        // Auto-Learning Logic: Check if we should learn this category assignment
+        if (txData.item && txData.category && txData.category !== "Uncategorized") {
+            const itemLower = txData.item.toLowerCase();
+            const targetCategory = txData.category;
+
+            setCategoryRules(prevRules => {
+                const ruleIndex = prevRules.findIndex(r => r.category === targetCategory);
+                let newRules = [...prevRules];
+
+                if (ruleIndex >= 0) {
+                    // Add keyword if not exists
+                    if (!newRules[ruleIndex].keywords.includes(itemLower)) {
+                        newRules[ruleIndex] = {
+                            ...newRules[ruleIndex],
+                            keywords: [...newRules[ruleIndex].keywords, itemLower]
+                        };
+                    } else {
+                        return prevRules; // No change needed
+                    }
+                } else {
+                    // Creates new rule group if category didn't exist in rules
+                    newRules.push({ category: targetCategory, keywords: [itemLower] });
+                }
+
+                // If rules changed, also auto-update ALL existing transactions with this item name
+                // We do this inside the setState callback to ensure we have the intent, 
+                // but actually we need to setTransactions separately. 
+                // To avoid side-effects in setState, we'll trigger this outside.
+                return newRules;
+            });
+
+            // Apply this new rule strictly to all current transactions with same item name
+            setTransactions(prev => prev.map(t => {
+                if (t.item && t.item.toLowerCase() === itemLower && t.category !== targetCategory) {
+                    return { ...t, category: targetCategory };
+                }
+                return t;
+            }));
+        }
+
         if (editingTransaction) {
             setTransactions(prev => prev.map(t => (t.id === txData.id ? txData : t)));
         } else {
@@ -198,224 +458,7 @@ export default function App() {
         }
     };
 
-    // Extensive Categorization Rules (Australian Context)
-    const CATEGORY_RULES = [
-        // -----------------------
-        // Transfers (must be early)
-        // -----------------------
-        {
-            category: "Transfers",
-            keywords: [
-                "transfer", "internet transfer", "osko", "pay anyone", "direct credit",
-                "bpay", "payment received", "salary", "payroll", "reimbursement",
-                "credit", "refund", "reversal"
-            ]
-        },
 
-        // -----------------------
-        // Fees and Interest (early)
-        // -----------------------
-        {
-            category: "Fees and Interest",
-            keywords: [
-                "interest", "late fee", "annual fee", "finance charge",
-                "foreign transaction fee", "fx fee", "overlimit", "fee"
-            ]
-        },
-
-        // -----------------------
-        // Housing
-        // -----------------------
-        {
-            category: "Housing",
-            keywords: [
-                "rent", "mortgage", "strata", "property management", "real estate",
-                "council rates", "water rates", "body corporate"
-            ]
-        },
-
-        // -----------------------
-        // Groceries
-        // -----------------------
-        {
-            category: "Groceries",
-            keywords: [
-                "woolworths", "coles", "aldi", "iga", "harris farm", "costco",
-                "foodland", "spar", "supabarn", "drakes", "fresh choice",
-                "butcher", "fruit shop", "greengrocer", "seafood"
-            ]
-        },
-
-        // -----------------------
-        // Dining Out
-        // -----------------------
-        {
-            category: "Dining Out",
-            keywords: [
-                "restaurant", "bistro", "eatery", "dining", "pub", "hotel bar",
-                "mcdonald", "kfc", "hungry jack", "burger", "pizza", "dominos",
-                "subway", "sushi", "grill", "nandos", "oporto", "guzman", "zambrero",
-                "red rooster", "thai", "ramen", "kebab", "dumpling"
-            ]
-        },
-
-        // -----------------------
-        // Coffee
-        // -----------------------
-        {
-            category: "Coffee",
-            keywords: [
-                "cafe", "coffee", "espresso", "barista", "mccafe",
-                "starbucks", "gloria jeans", "zarraffas", "campos", "single o"
-            ]
-        },
-
-        // -----------------------
-        // Fuel
-        // -----------------------
-        {
-            category: "Fuel",
-            keywords: [
-                "bp", "shell", "caltex", "ampol", "mobil", "7-eleven fuel", "7 eleven fuel",
-                "united petroleum", "liberty", "metro petroleum", "petrol", "fuel"
-            ]
-        },
-
-        // -----------------------
-        // Transport
-        // -----------------------
-        {
-            category: "Transport",
-            keywords: [
-                // Rideshare / taxis
-                "uber trip", "uber", "didi", "ola", "taxi", "13cabs",
-
-                // Public transport
-                "opal", "myki", "transportfornsw", "transport for nsw", "translink",
-
-                // Parking / tolls
-                "linkt", "e-toll", "etoll", "toll", "wilson parking", "secure parking"
-            ]
-        },
-
-        // -----------------------
-        // Utilities
-        // -----------------------
-        {
-            category: "Utilities",
-            keywords: [
-                "agl", "origin", "energy australia", "red energy", "alinta",
-                "electricity", "gas", "internet", "broadband",
-                "telstra", "optus", "vodafone", "aussie broadband", "tpg", "iiNet",
-                "sydney water", "water corporation", "unitywater"
-            ]
-        },
-
-        // -----------------------
-        // Subscriptions (use statement patterns, avoid plain "apple"/"google")
-        // -----------------------
-        {
-            category: "Subscriptions",
-            keywords: [
-                "apple.com/bill", "itunes", "app store",
-                "prime vide", "amazon prime", "netflix", "spotify",
-                "disney", "binge", "kayo", "stan", "paramount", "youtube premium",
-                "audible", "playstation network", "xbox", "nintendo",
-                "openai", "chatgpt"
-            ]
-        },
-
-        // -----------------------
-        // Health
-        // -----------------------
-        {
-            category: "Health",
-            keywords: [
-                "chemist", "pharmacy", "chemist warehouse", "priceline", "terrywhite",
-                "doctor", "medical", "dental", "dentist", "pathology", "radiology",
-                "physio", "chiro", "optometrist"
-            ]
-        },
-
-        // -----------------------
-        // Insurance
-        // -----------------------
-        {
-            category: "Insurance",
-            keywords: [
-                "nrma", "aami", "allianz", "gio", "youi", "budget direct",
-                "racv", "racq", "nib", "bupa", "medibank", "hcf"
-            ]
-        },
-
-        // -----------------------
-        // Shopping
-        // -----------------------
-        {
-            category: "Shopping",
-            keywords: [
-                "amazon", "ebay", "kmart", "big w", "target", "myer", "david jones",
-                "jb hi-fi", "officeworks", "kogan", "the good guys", "harvey norman",
-                "uniqlo", "zara", "h&m", "cotton on", "shein", "temu"
-            ]
-        },
-
-        // -----------------------
-        // Home and Garden
-        // -----------------------
-        {
-            category: "Home and Garden",
-            keywords: [
-                "bunnings", "ikea", "mitre 10", "stratco", "freedom", "fantastic furniture",
-                "spotlight", "nursery", "garden", "hardware"
-            ]
-        },
-
-        // -----------------------
-        // Entertainment
-        // -----------------------
-        {
-            category: "Entertainment",
-            keywords: [
-                "event cinemas", "hoyts", "imax", "cinema", "theatre",
-                "ticketek", "ticketmaster",
-                "steam", "epic games", "playstation store", "xbox store"
-            ]
-        },
-
-        // -----------------------
-        // Travel
-        // -----------------------
-        {
-            category: "Travel",
-            keywords: [
-                "qantas", "virgin", "jetstar", "emirates", "singapore airlines",
-                "airbnb", "booking.com", "expedia", "hotel", "resort",
-                "airalo", "travel"
-            ]
-        },
-
-        // -----------------------
-        // Gifts
-        // -----------------------
-        {
-            category: "Gifts",
-            keywords: [
-                "gift", "flowers", "florist", "gift card"
-            ]
-        },
-
-        // -----------------------
-        // Education
-        // -----------------------
-        {
-            category: "Education",
-            keywords: [
-                "course", "training", "udemy", "coursera", "pluralsight", "linkedin learning",
-                "university", "tafe"
-            ]
-        },
-    ];
 
 
     // Feature: Rescan all transactions and update categories
@@ -424,7 +467,7 @@ export default function App() {
 
         const newTransactions = transactions.map(tx => {
             const desc = tx.description || tx.item || ""; // Fallback to item if description missing
-            const guessed = categorizeTransaction(desc, CATEGORY_RULES);
+            const guessed = categorizeTransaction(desc, categoryRules);
 
             // Update only if currently Uncategorized and we found a match
             if (guessed !== "Uncategorized" && tx.category !== guessed) {
@@ -458,7 +501,8 @@ export default function App() {
 
                         if (!date || !description || Number.isNaN(amount)) continue;
 
-                        const category = t.category || categorizeTransaction(description, CATEGORY_RULES);
+
+                        const category = t.category || categorizeTransaction(description, categoryRules);
 
                         // If the guessed category is new, ensure it's in our list
                         if (category !== "Uncategorized") {

@@ -1,18 +1,27 @@
-import React from "react";
-import { X } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { X, ChevronDown } from "lucide-react";
 
 export default function TransactionModal({ isOpen, onClose, onSave, initialData, availableCategories }) {
-    const [formData, setFormData] = React.useState({
+    const [formData, setFormData] = useState({
         item: "",
         amount: "",
         category: "Food",
         date: new Date().toISOString().split("T")[0],
     });
 
+    // Custom Dropdown State
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [forceShowAll, setForceShowAll] = useState(false);
+    const dropdownRef = useRef(null);
+    const inputRef = useRef(null);
+
+    // Initialize filtered categories
+    const categoryList = availableCategories || ["Housing", "Food", "Groceries", "Utilities"];
+
     // Load initial data when modal opens or initialData changes
     const isEditing = !!initialData;
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (isOpen && initialData) {
             setFormData({
                 item: initialData.item,
@@ -29,7 +38,26 @@ export default function TransactionModal({ isOpen, onClose, onSave, initialData,
                 date: new Date().toISOString().split("T")[0],
             });
         }
+        setIsDropdownOpen(false);
+        setForceShowAll(false);
     }, [isOpen, initialData]);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target) && !inputRef.current.contains(event.target)) {
+                setIsDropdownOpen(false);
+                setForceShowAll(false);
+            }
+        };
+
+        if (isDropdownOpen) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [isDropdownOpen]);
 
     if (!isOpen) return null;
 
@@ -48,12 +76,14 @@ export default function TransactionModal({ isOpen, onClose, onSave, initialData,
         onClose();
     };
 
-    // Use passed categories or default to empty list.
-    const categoryList = availableCategories || ["Housing", "Food", "Groceries", "Utilities"];
+    // Filter categories based on input, unless we are forcing "show all" (e.g. via chevron)
+    const filteredCategories = forceShowAll
+        ? categoryList
+        : categoryList.filter(cat => cat.toLowerCase().includes(formData.category.toLowerCase()));
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden dark:bg-gray-800">
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden dark:bg-gray-800 flex flex-col max-h-[90vh]">
                 <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700">
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                         {isEditing ? "Edit Transaction" : "New Transaction"}
@@ -63,7 +93,7 @@ export default function TransactionModal({ isOpen, onClose, onSave, initialData,
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Item Name</label>
                         <input
@@ -91,21 +121,68 @@ export default function TransactionModal({ isOpen, onClose, onSave, initialData,
                             />
                         </div>
 
-                        <div>
+                        <div className="relative">
                             <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Category</label>
-                            <input
-                                list="category-options"
-                                type="text"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                placeholder="Select or type..."
-                                value={formData.category}
-                                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                            />
-                            <datalist id="category-options">
-                                {categoryList.map(cat => (
-                                    <option key={cat} value={cat} />
-                                ))}
-                            </datalist>
+                            <div className="relative">
+                                <input
+                                    ref={inputRef}
+                                    type="text"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white pr-8"
+                                    placeholder="Select or type..."
+                                    value={formData.category}
+                                    onChange={(e) => {
+                                        setFormData({ ...formData, category: e.target.value });
+                                        setIsDropdownOpen(true);
+                                        setForceShowAll(false); // Typing re-enables filtering
+                                    }}
+                                    onFocus={(e) => {
+                                        setIsDropdownOpen(true);
+                                        e.target.select(); // Select all text on focus for easy replacement
+                                    }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const willOpen = !isDropdownOpen;
+                                        setIsDropdownOpen(willOpen);
+                                        if (willOpen) {
+                                            setForceShowAll(true); // Chevron click shows all categories
+                                            if (inputRef.current) inputRef.current.focus();
+                                        }
+                                    }}
+                                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                >
+                                    <ChevronDown className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            {/* Custom Dropdown Menu */}
+                            {isDropdownOpen && (
+                                <ul
+                                    ref={dropdownRef}
+                                    className="absolute z-[1001] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto dark:bg-gray-800 dark:border-gray-700"
+                                >
+                                    {filteredCategories.length > 0 ? (
+                                        filteredCategories.map(cat => (
+                                            <li
+                                                key={cat}
+                                                className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-gray-700 dark:text-gray-200"
+                                                onClick={() => {
+                                                    setFormData({ ...formData, category: cat });
+                                                    setIsDropdownOpen(false);
+                                                    setForceShowAll(false);
+                                                }}
+                                            >
+                                                {cat}
+                                            </li>
+                                        ))
+                                    ) : (
+                                        <li className="px-4 py-2 text-gray-500 dark:text-gray-400 italic">
+                                            No matching categories. "{formData.category}" will be created.
+                                        </li>
+                                    )}
+                                </ul>
+                            )}
                         </div>
                     </div>
 
