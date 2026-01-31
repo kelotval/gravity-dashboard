@@ -43,7 +43,7 @@ export default function DashboardLayout({ children, currentTab, onTabChange }) {
         <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
             {/* Sidebar */}
             <aside className={clsx(
-                "fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 dark:bg-gray-800 dark:border-gray-700 transform transition-transform duration-200 ease-in-out lg:transform-none",
+                "fixed lg:static inset-y-0 left-0 z-[100] w-64 bg-white border-r border-gray-200 dark:bg-gray-800 dark:border-gray-700 transform transition-transform duration-200 ease-in-out lg:transform-none",
                 isSidebarOpen ? "translate-x-0" : "-translate-x-full"
             )}>
                 <div className="p-6">
