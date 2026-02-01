@@ -97,8 +97,8 @@ export function IncomeExpenseChart({ data }) {
                     >
                         <defs>
                             <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#6366f1" stopOpacity={1} />
-                                <stop offset="100%" stopColor="#818cf8" stopOpacity={1} />
+                                <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
+                                <stop offset="100%" stopColor="#34d399" stopOpacity={1} />
                             </linearGradient>
                             <linearGradient id="expenseGradient" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="0%" stopColor="#f43f5e" stopOpacity={1} />
@@ -131,6 +131,12 @@ export function IncomeExpenseChart({ data }) {
                             labelStyle={{ color: '#6b7280', marginBottom: '8px', fontSize: '12px' }}
                             itemStyle={{ fontWeight: 600, fontSize: '13px' }}
                             formatter={(value) => [`$${value.toLocaleString()}`, undefined]}
+                        />
+                        <Legend
+                            verticalAlign="top"
+                            height={36}
+                            iconType="circle"
+                            formatter={(value) => <span className="text-gray-900 dark:text-gray-300 font-medium ml-1">{value}</span>}
                         />
                         <Bar
                             dataKey="Income"

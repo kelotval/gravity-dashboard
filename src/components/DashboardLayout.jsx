@@ -30,7 +30,8 @@ export default function DashboardLayout({ children, currentTab, onTabChange }) {
     };
 
     const navItems = [
-        { id: "overview", icon: LayoutDashboard, label: "Overview" },
+        { id: "overview_v2", icon: LayoutDashboard, label: "Overview V2" },
+        { id: "overview", icon: LayoutDashboard, label: "Overview" }, // Legacy view preserved
         { id: "liabilities", icon: Wallet, label: "Active Liabilities" },
         { id: "payoff", icon: Calendar, label: "Payoff Plan" },
         { id: "scenarios", icon: Sliders, label: "Scenarios" },

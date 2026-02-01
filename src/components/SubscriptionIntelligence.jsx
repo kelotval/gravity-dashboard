@@ -7,7 +7,12 @@ export default function SubscriptionIntelligence({ transactions = [], debts = []
 
     // Identify and analyze subscriptions
     const subscriptions = useMemo(() => {
-        const subTransactions = transactions.filter(tx => tx.category === "Subscriptions");
+        const subTransactions = transactions.filter(tx => {
+            if (!tx.category) return false;
+            const cat = tx.category.toLowerCase().trim();
+            // Match "subscription" or "subscriptions" (with or without extra text)
+            return cat.includes("subscription");
+        });
 
         // Group by merchant
         const grouped = subTransactions.reduce((acc, tx) => {
