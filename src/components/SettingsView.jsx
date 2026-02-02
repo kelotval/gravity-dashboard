@@ -1,7 +1,7 @@
 import React from "react";
 import { Plus, Trash2, Smartphone, Home, DollarSign } from "lucide-react";
 
-export default function SettingsView({ profile, income, debts, onUpdateProfile, onUpdateIncome, onUpdateDebts, advancedSettings, onUpdateSettings }) {
+export default function SettingsView({ profile, income, debts, onUpdateProfile, onUpdateIncome, onUpdateDebts, advancedSettings, onUpdateSettings, incomeHistory, onUpdateIncomeHistory }) {
     const [localProfile, setLocalProfile] = React.useState(profile);
     const [localIncome, setLocalIncome] = React.useState(income);
 
@@ -91,6 +91,75 @@ export default function SettingsView({ profile, income, debts, onUpdateProfile, 
                             value={localIncome.other}
                             onChange={(e) => handleIncomeChange("other", e.target.value)}
                         />
+                    </div>
+                </div>
+
+                {/* Income History Table */}
+                <div className="mt-8 border-t border-gray-100 dark:border-gray-700 pt-6">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-4 dark:text-white">Income History & Changes</h4>
+                    <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-600">
+                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead className="bg-gray-50 dark:bg-gray-700">
+                                <tr>
+                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-300">Effective Date</th>
+                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-300">Eric</th>
+                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-300">Rebecca</th>
+                                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase dark:text-gray-300">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
+                                {(incomeHistory || []).sort((a, b) => b.date.localeCompare(a.date)).map((entry) => (
+                                    <tr key={entry.id}>
+                                        <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">{entry.date}</td>
+                                        <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">${entry.salaryEric?.toLocaleString()}</td>
+                                        <td className="px-4 py-2 text-sm text-green-600 font-medium dark:text-green-400">${entry.salaryRebecca?.toLocaleString()}</td>
+                                        <td className="px-4 py-2 text-right">
+                                            <button
+                                                onClick={() => onUpdateIncomeHistory(incomeHistory.filter(h => h.id !== entry.id))}
+                                                className="text-gray-400 hover:text-red-500"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Add New Change UI - Simple Implementation */}
+                    <div className="mt-4 flex gap-2 items-end">
+                        <div className="flex-1">
+                            <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">New Effective Month</label>
+                            <input type="month" id="new-inc-date" className="w-full text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-2 py-1" />
+                        </div>
+                        <div className="flex-1">
+                            <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Eric New</label>
+                            <input type="number" id="new-inc-eric" defaultValue={income.salaryEric} className="w-full text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-2 py-1" />
+                        </div>
+                        <div className="flex-1">
+                            <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Rebecca New</label>
+                            <input type="number" id="new-inc-rebecca" defaultValue={income.salaryRebecca} className="w-full text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-2 py-1" />
+                        </div>
+                        <button
+                            onClick={() => {
+                                const date = document.getElementById('new-inc-date').value;
+                                const eric = parseFloat(document.getElementById('new-inc-eric').value) || 0;
+                                const reb = parseFloat(document.getElementById('new-inc-rebecca').value) || 0;
+                                if (date) {
+                                    onUpdateIncomeHistory([...(incomeHistory || []), {
+                                        id: Date.now().toString(),
+                                        date,
+                                        salaryEric: eric,
+                                        salaryRebecca: reb,
+                                        other: income.other
+                                    }]);
+                                }
+                            }}
+                            className="bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-blue-700"
+                        >
+                            Add Change
+                        </button>
                     </div>
                 </div>
             </section>

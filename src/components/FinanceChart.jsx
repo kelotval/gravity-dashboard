@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
     PieChart, Pie, Cell, Legend, Sector
 } from "recharts";
 import { ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, DollarSign, Wallet } from "lucide-react";
@@ -48,7 +48,7 @@ const renderActiveShape = (props) => {
     );
 };
 
-export function IncomeExpenseChart({ data }) {
+export function IncomeExpenseChart({ data, plannedIncome = 0 }) {
     // Calculate KPIs safely from data array
     const current = data[0] || { Income: 0, Expenses: 0 };
     const net = current.Income - current.Expenses;

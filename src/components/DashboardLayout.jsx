@@ -1,8 +1,9 @@
 import React from "react";
 import { LayoutDashboard, CreditCard, PieChart, Settings, Menu, Wallet, Moon, Sun, Calendar, LineChart, Sparkles, Sliders, Globe } from "lucide-react";
 import clsx from "clsx";
+import SyncIndicator from "./SyncIndicator";
 
-export default function DashboardLayout({ children, currentTab, onTabChange }) {
+export default function DashboardLayout({ children, currentTab, onTabChange, syncStatus }) {
     const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
     // Initialize state from local storage or system preference
     const [isDarkMode, setIsDarkMode] = React.useState(() => {
@@ -78,7 +79,7 @@ export default function DashboardLayout({ children, currentTab, onTabChange }) {
 
             {/* Main Content Wrapper */}
             <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden overflow-y-auto">
-                {/* Top Header for Theme Toggle */}
+                {/* Top Header for Theme Toggle and Sync Indicator */}
                 <header className="flex justify-end items-center p-4 lg:pr-8 bg-gray-50 dark:bg-gray-900 sticky top-0 z-50 gap-3">
                     {/* Mobile Menu Button - Moved inside header */}
                     <button
@@ -87,6 +88,9 @@ export default function DashboardLayout({ children, currentTab, onTabChange }) {
                     >
                         <Menu className="w-6 h-6 text-gray-600 dark:text-gray-300" />
                     </button>
+
+                    {/* Sync Indicator */}
+                    {syncStatus && <SyncIndicator status={syncStatus} />}
 
                     <button
                         onClick={toggleTheme}

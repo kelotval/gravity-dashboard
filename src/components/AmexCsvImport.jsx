@@ -1,9 +1,9 @@
 import React, { useState, useRef } from "react";
 import Papa from "papaparse";
-import { Upload, FileCheck, AlertCircle, FileSpreadsheet } from "lucide-react";
+import { Upload, FileCheck, AlertCircle, FileSpreadsheet, CheckCircle, Calendar } from "lucide-react";
 
 /**
- * AMEX statement CSV importer.
+ * AMEX statement CSV importer with statement-aware period selection.
  * Requires columns:
  * - Date
  * - Amount
@@ -48,15 +48,35 @@ function parseAmount(value) {
 export default function AmexCsvImport({ onImport }) {
   const [fileName, setFileName] = useState("");
   const [error, setError] = useState("");
-  const [parsedCount, setParsedCount] = useState(0);
+  const [selectedPeriod, setSelectedPeriod] = useState("");
+  const [parsedData, setParsedData] = useState(null); // Holds parsed but not confirmed data
+  const [preview, setPreview] = useState(null); // Holds summary stats
   const fileInputRef = useRef(null);
+
+  // Generate available periods (last 24 months)
+  const availablePeriods = React.useMemo(() => {
+    const periods = [];
+    const now = new Date();
+    for (let i = 0; i < 24; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const periodKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      periods.push(periodKey);
+    }
+    return periods;
+  }, []);
 
   const handleFile = (file) => {
     setError("");
-    setParsedCount(0);
+    setParsedData(null);
+    setPreview(null);
     setFileName(file?.name || "");
 
     if (!file) return;
+
+    if (!selectedPeriod) {
+      setError("Please select a Statement Month before uploading.");
+      return;
+    }
 
     Papa.parse(file, {
       header: true,
@@ -104,6 +124,7 @@ export default function AmexCsvImport({ onImport }) {
             amount,
             description,
             merchant: description,
+            periodKey: selectedPeriod, // ✅ Set periodKey from selection
             reference: String(row["Reference"] || "").trim() || null,
             card: String(row["Card Member"] || "").trim() || null,
             country: String(row["Country"] || "").trim() || null,
@@ -116,11 +137,67 @@ export default function AmexCsvImport({ onImport }) {
           return;
         }
 
-        setParsedCount(out.length);
-        onImport?.(out);
+        // Calculate preview summary
+        let grossPurchases = 0;
+        let refunds = 0;
+        let payments = 0;
+        let transfers = 0;
+
+        for (const tx of out) {
+          const amt = tx.amount;
+          if (amt < 0) {
+            // Negative = expense/purchase
+            grossPurchases += Math.abs(amt);
+          } else if (amt > 0) {
+            // Positive = refund/payment/transfer
+            const desc = tx.description.toLowerCase();
+            if (desc.includes("payment") || desc.includes("thank you")) {
+              payments += amt;
+            } else if (desc.includes("transfer")) {
+              transfers += amt;
+            } else {
+              refunds += amt;
+            }
+          }
+        }
+
+        const netSpend = grossPurchases - refunds;
+
+        setParsedData(out);
+        setPreview({
+          grossPurchases,
+          refunds,
+          payments,
+          transfers,
+          netSpend,
+          totalCount: out.length,
+          duplicatesSkipped: 0, // Will be calculated on confirm
+        });
       },
       error: (e) => setError(e?.message || "Failed to parse CSV."),
     });
+  };
+
+  const handleConfirm = () => {
+    if (!parsedData) return;
+    onImport?.(parsedData);
+    // Reset
+    setParsedData(null);
+    setPreview(null);
+    setFileName("");
+    setSelectedPeriod("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleCancel = () => {
+    setParsedData(null);
+    setPreview(null);
+    setFileName("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   return (
@@ -133,49 +210,130 @@ export default function AmexCsvImport({ onImport }) {
           <div>
             <h3 className="text-sm font-bold text-gray-900 dark:text-white">Import Transaction Data</h3>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Supports AMEX CSV format.
+              Supports AMEX CSV format. Select statement month first.
             </p>
           </div>
         </div>
 
-        <div
-          onClick={() => fileInputRef.current?.click()}
-          className="border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-xl p-6 text-center cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all group"
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,text/csv"
-            onChange={(e) => handleFile(e.target.files?.[0])}
-            className="hidden"
-          />
-
-          <div className="flex flex-col items-center justify-center gap-2">
-            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Upload className="w-5 h-5" />
-            </div>
-            <div className="text-sm font-medium text-gray-900 dark:text-white">
-              {fileName ? "Change File" : "Click to Upload CSV"}
-            </div>
-            {!fileName && (
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                or drag and drop here
-              </p>
-            )}
-          </div>
+        {/* Statement Month Selection */}
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            Statement Month (Required)
+          </label>
+          <select
+            value={selectedPeriod}
+            onChange={(e) => setSelectedPeriod(e.target.value)}
+            className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 text-sm focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            disabled={!!parsedData}
+          >
+            <option value="">Select statement month...</option>
+            {availablePeriods.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
         </div>
 
-        {fileName && (
+        {!parsedData && (
+          <div
+            onClick={() => selectedPeriod && fileInputRef.current?.click()}
+            className={`border-2 border-dashed ${selectedPeriod
+                ? "border-gray-200 dark:border-gray-600 cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                : "border-gray-100 dark:border-gray-700 cursor-not-allowed opacity-50"
+              } rounded-xl p-6 text-center transition-all group`}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              onChange={(e) => handleFile(e.target.files?.[0])}
+              className="hidden"
+              disabled={!selectedPeriod}
+            />
+
+            <div className="flex flex-col items-center justify-center gap-2">
+              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Upload className="w-5 h-5" />
+              </div>
+              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                {selectedPeriod ? "Click to Upload CSV" : "Select month first"}
+              </div>
+              {selectedPeriod && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  or drag and drop here
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {fileName && !parsedData && (
           <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 flex items-center justify-between border border-gray-100 dark:border-gray-600">
             <div className="flex items-center gap-2 overflow-hidden">
               <FileCheck className="w-4 h-4 text-green-500 shrink-0" />
               <span className="text-sm text-gray-700 dark:text-gray-200 truncate">{fileName}</span>
             </div>
-            {parsedCount > 0 && (
-              <span className="text-xs font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded">
-                {parsedCount} Parsed
-              </span>
-            )}
+          </div>
+        )}
+
+        {/* Preview Summary */}
+        {preview && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <CheckCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <h4 className="text-sm font-bold text-blue-900 dark:text-blue-200">
+                Preview Summary - {selectedPeriod}
+              </h4>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                <div className="text-xs text-gray-500 dark:text-gray-400">Gross Purchases</div>
+                <div className="font-bold text-gray-900 dark:text-white">${preview.grossPurchases.toFixed(2)}</div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                <div className="text-xs text-gray-500 dark:text-gray-400">Refunds</div>
+                <div className="font-bold text-emerald-600 dark:text-emerald-400">${preview.refunds.toFixed(2)}</div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                <div className="text-xs text-gray-500 dark:text-gray-400">Payments</div>
+                <div className="font-bold text-blue-600 dark:text-blue-400">${preview.payments.toFixed(2)}</div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                <div className="text-xs text-gray-500 dark:text-gray-400">Transfers</div>
+                <div className="font-bold text-purple-600 dark:text-purple-400">${preview.transfers.toFixed(2)}</div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 p-2 rounded col-span-2">
+                <div className="text-xs text-gray-500 dark:text-gray-400">Net Spend</div>
+                <div className="font-bold text-lg text-gray-900 dark:text-white">${preview.netSpend.toFixed(2)}</div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                <div className="text-xs text-gray-500 dark:text-gray-400">Transactions</div>
+                <div className="font-bold text-gray-900 dark:text-white">{preview.totalCount}</div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                <div className="text-xs text-gray-500 dark:text-gray-400">Duplicates Skipped</div>
+                <div className="font-bold text-yellow-600 dark:text-yellow-400">{preview.duplicatesSkipped}</div>
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={handleConfirm}
+                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition flex items-center justify-center gap-2"
+              >
+                <CheckCircle className="w-4 h-4" />
+                Confirm Import
+              </button>
+              <button
+                onClick={handleCancel}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium transition"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         )}
 
@@ -186,9 +344,11 @@ export default function AmexCsvImport({ onImport }) {
           </div>
         ) : null}
 
-        <div className="text-[10px] text-gray-400 dark:text-gray-500 text-center">
-          Expected columns: Date, Amount, Description/Appears On Your Statement As
-        </div>
+        {!preview && (
+          <div className="text-[10px] text-gray-400 dark:text-gray-500 text-center">
+            Expected columns: Date, Amount, Description/Appears On Your Statement As
+          </div>
+        )}
       </div>
     </div>
   );
