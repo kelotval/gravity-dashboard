@@ -26,8 +26,9 @@ import RecurringExpensesModal from "./components/RecurringExpensesModal";
 import { categorizeTransaction } from "./utils/categorize";
 import { calculateDetailedHealthScore } from "./utils/healthScore";
 import { DEFAULT_OFFERS, DEFAULT_RELOCATION_SETTINGS } from "./data/relocationOffers";
-import { supabase } from "./lib/supabaseClient";
+import { getHouseholdState, upsertHouseholdState } from "./lib/householdApi";
 import SyncIndicator from "./components/SyncIndicator";
+import HouseholdPinGate from "./components/HouseholdPinGate";
 
 import { DEFAULT_STATE } from "./data";
 import { DollarSign, TrendingDown, PiggyBank, Wallet, Plus, RefreshCw, Layers, Calendar } from "lucide-react";
@@ -353,11 +354,12 @@ function parseAmount(v) {
 }
 
 export default function App() {
-    // Current user state (passed from AuthGate via context or prop if needed)
-    // For now, we get it directly from supabase
-    const [currentUser, setCurrentUser] = useState(null);
-    const [syncStatus, setSyncStatus] = useState('loading'); // loading, saving, synced, offline, error
+    // Household PIN state
+    const [householdPin, setHouseholdPin] = useState(null);
+    const [showPinGate, setShowPinGate] = useState(true);
+    const [syncStatus, setSyncStatus] = useState('offline'); // loading, saving, synced, offline
     const saveTimeoutRef = useRef(null);
+    const [hasInitializedRemote, setHasInitializedRemote] = useState(false);
     const stored = useMemo(() => loadStored(), []);
 
     const [transactions, setTransactions] = useState(stored?.transactions ?? DEFAULT_STATE.transactions);
@@ -468,119 +470,77 @@ export default function App() {
         load();
     }, []);
 
-
-    // Auth state listener
+    // Check for saved PIN on startup
     useEffect(() => {
-        if (!supabase) {
-            setSyncStatus('offline');
-            return;
+        const savedPin = localStorage.getItem('er_finance_household_pin');
+        if (savedPin) {
+            setHouseholdPin(savedPin);
+            setShowPinGate(false);
         }
-
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setCurrentUser(session?.user ?? null);
-        });
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setCurrentUser(session?.user ?? null);
-        });
-
-        return () => subscription.unsubscribe();
     }, []);
 
-    // Remote state load/save
-    const loadRemoteState = useCallback(async (userId) => {
-        if (!supabase) return null;
+    // Handle PIN set from HouseholdPinGate
+    const handlePinSet = useCallback((pin) => {
+        setHouseholdPin(pin);
+        setShowPinGate(false);
+    }, []);
 
-        try {
-            const { data, error } = await supabase
-                .from('household_state')
-                .select('state, updated_at')
-                .eq('household_key', userId)
-                .single();
+    // Load remote state when PIN is set
+    useEffect(() => {
+        if (!householdPin || hasInitializedRemote) return;
 
-            if (error) {
-                if (error.code === 'PGRST116') {
-                    // Row doesn't exist - first time user
-                    return null;
+        const initializeRemote = async () => {
+            try {
+                setSyncStatus('loading');
+
+                // Try to fetch remote state
+                const remoteState = await getHouseholdState(householdPin);
+
+                if (remoteState && Object.keys(remoteState).length > 0) {
+                    // Returning household - load remote state
+                    setTransactions(remoteState.transactions ?? []);
+                    setIncome(remoteState.income ?? DEFAULT_STATE.income);
+                    setDebts(remoteState.debts ?? []);
+                    setProfile(remoteState.profile ?? DEFAULT_STATE.profile);
+                    setAdvancedSettings(remoteState.advancedSettings ?? DEFAULT_STATE.advancedSettings);
+                    setCategoryRules(remoteState.categoryRules ?? DEFAULT_CATEGORY_RULES);
+                    setCategories(remoteState.categories ?? DEFAULT_STATE.categories);
+                    setRelocation(remoteState.relocation ?? DEFAULT_STATE.relocation);
+                    setIncomeHistory(remoteState.incomeHistory ?? []);
+                    setRecurringExpenses(remoteState.recurringExpenses ?? []);
+                    setActivePeriodKey(remoteState.activePeriodKey ?? new Date().toISOString().substring(0, 7));
+                    console.log('✅ Loaded remote state');
+                    setSyncStatus('synced');
+                } else {
+                    // First time household - keep local state and upsert to remote
+                    console.log('📤 First time household, uploading local state...');
+                    const currentState = {
+                        transactions,
+                        income,
+                        debts,
+                        profile,
+                        advancedSettings,
+                        categoryRules,
+                        categories,
+                        relocation,
+                        incomeHistory,
+                        recurringExpenses,
+                        activePeriodKey
+                    };
+                    await upsertHouseholdState(householdPin, currentState);
+                    setSyncStatus('synced');
                 }
-                throw error;
+
+                setHasInitializedRemote(true);
+            } catch (err) {
+                console.error('Failed to initialize remote state:', err);
+                setSyncStatus('offline');
+                setHasInitializedRemote(true); // Don't retry automatically
             }
+        };
 
-            return data?.state ?? null;
-        } catch (err) {
-            console.error('Failed to load remote state:', err);
-            return null;
-        }
-    }, []);
-
-    const saveRemoteState = useCallback(async (userId, state) => {
-        if (!supabase) return;
-
-        try {
-            setSyncStatus('saving');
-
-            const { error } = await supabase
-                .from('household_state')
-                .upsert({
-                    household_key: userId,
-                    state: state,
-                    updated_at: new Date().toISOString()
-                }, {
-                    onConflict: 'household_key'
-                });
-
-            if (error) throw error;
-
-            setSyncStatus('synced');
-        } catch (err) {
-            console.error('Failed to save remote state:', err);
-            setSyncStatus('offline');
-        }
-    }, []);
-
-    // Load remote state when user logs in
-    useEffect(() => {
-        if (!currentUser || !supabase) {
-            if (supabase) setSyncStatus('offline');
-            return;
-        }
-
-        setSyncStatus('loading');
-
-        loadRemoteState(currentUser.id).then(async (remoteState) => {
-            if (remoteState) {
-                // Returning user - load remote state
-                setTransactions(remoteState.transactions ?? []);
-                setIncome(remoteState.income ?? DEFAULT_STATE.income);
-                setDebts(remoteState.debts ?? []);
-                setProfile(remoteState.profile ?? DEFAULT_STATE.profile);
-                setAdvancedSettings(remoteState.advancedSettings ?? DEFAULT_STATE.advancedSettings);
-                setCategoryRules(remoteState.categoryRules ?? DEFAULT_CATEGORY_RULES);
-                setCategories(remoteState.categories ?? DEFAULT_STATE.categories);
-                setRelocation(remoteState.relocation ?? DEFAULT_STATE.relocation);
-                setIncomeHistory(remoteState.incomeHistory ?? []);
-                setRecurringExpenses(remoteState.recurringExpenses ?? []);
-                setActivePeriodKey(remoteState.activePeriodKey ?? new Date().toISOString().substring(0, 7));
-                setSyncStatus('synced');
-            } else {
-                // First time user - save current local state to remote
-                const currentState = {
-                    transactions,
-                    income,
-                    debts,
-                    profile,
-                    advancedSettings,
-                    categoryRules,
-                    categories,
-                    relocation,
-                    incomeHistory,
-                    recurringExpenses,
-                    activePeriodKey
-                };
-                await saveRemoteState(currentUser.id, currentState);
-            }
-        });
-    }, [currentUser, loadRemoteState, saveRemoteState]);
+        initializeRemote();
+    }, [householdPin, hasInitializedRemote]);
 
     // Save to localStorage and debounced remote sync
     useEffect(() => {
@@ -602,14 +562,21 @@ export default function App() {
         };
         saveStored(payload);
 
-        // Debounced remote sync if user is logged in
-        if (currentUser && supabase) {
+        // Debounced remote sync if PIN is set
+        if (householdPin) {
             if (saveTimeoutRef.current) {
                 clearTimeout(saveTimeoutRef.current);
             }
 
-            saveTimeoutRef.current = setTimeout(() => {
-                saveRemoteState(currentUser.id, payload);
+            saveTimeoutRef.current = setTimeout(async () => {
+                try {
+                    setSyncStatus('saving');
+                    await upsertHouseholdState(householdPin, payload);
+                    setSyncStatus('synced');
+                } catch (err) {
+                    console.error('Failed to sync household state:', err);
+                    setSyncStatus('offline');
+                }
             }, 800);
 
             return () => {
@@ -618,7 +585,7 @@ export default function App() {
                 }
             };
         }
-    }, [transactions, income, debts, profile, advancedSettings, categoryRules, categories, relocation, incomeHistory, recurringExpenses, activePeriodKey, hasLoadedCloud, currentUser, saveRemoteState]);
+    }, [transactions, income, debts, profile, advancedSettings, categoryRules, categories, relocation, incomeHistory, recurringExpenses, activePeriodKey, hasLoadedCloud, householdPin]);
 
 
 
@@ -777,10 +744,10 @@ export default function App() {
                 description: item.description,
                 item: item.description,
                 merchant: item.description,
-                amount: -Math.abs(parseAmount(item.amount)),  // Always negative for expenses
-                category: item.category || "Housing",
+                amount: -Math.abs(parseAmount(item.amount)),  // Force negative for expenses
+                category: item.category || "Other",  // Default to "Other" if missing
                 type: "expense",
-                kind: "expense",  // Explicitly set kind to guarantee classification
+                kind: "expense",  // Explicitly set to prevent inference
                 isVirtual: true,
             }));
 
@@ -873,21 +840,28 @@ export default function App() {
     // Dev Mode Assertion: Data Consistency Check
     // ---------------------------------------------
     const dataConsistencyCheck = useMemo(() => {
-        // Calculate sum of activeTransactionsAll spending (expenses only)
-        const calculatedSpending = activeTransactionsAll
-            .filter(tx => tx.kind === "expense")
+        // Calculate sum of REAL (non-virtual) transaction spending only
+        // Virtual transactions represent recurring expenses, which are already
+        // included in the ledger's recurringSpend field
+        const realExpensesOnly = activeTransactionsAll
+            .filter(tx => tx.kind === "expense" && !tx.isVirtual)
             .reduce((sum, tx) => sum + Math.abs(parseAmount(tx.amount)), 0);
 
         const ledgerExpenses = activeLedgerEntry.totalExpenses;
-        const delta = Math.abs(calculatedSpending - ledgerExpenses);
+        const ledgerRecurring = activeLedgerEntry.recurringSpend;
+
+        // For fair comparison: add recurring back to real expenses
+        // because ledger totalExpenses = amexNetSpend + recurringSpend
+        const calculatedTotal = realExpensesOnly + ledgerRecurring;
+        const delta = Math.abs(calculatedTotal - ledgerExpenses);
 
         return {
-            calculatedSpending,
+            calculatedSpending: calculatedTotal,
             ledgerExpenses,
             delta,
             hasMismatch: delta > 1  // More than $1 difference
         };
-    }, [activeTransactionsAll, activeLedgerEntry.totalExpenses]);
+    }, [activeTransactionsAll, activeLedgerEntry.totalExpenses, activeLedgerEntry.recurringSpend]);
 
     // Financial Health Calculations
     // Note: Debt Balances and Net Worth are effectively "Snapshot" or "Global"
@@ -1831,6 +1805,11 @@ export default function App() {
         );
 
     };
+
+    // Show PIN gate if no PIN is set
+    if (showPinGate) {
+        return <HouseholdPinGate onPinSet={handlePinSet} />;
+    }
 
     return (
         <DashboardLayout currentTab={currentTab} onTabChange={setCurrentTab} syncStatus={syncStatus}>
