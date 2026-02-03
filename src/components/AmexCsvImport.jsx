@@ -1,6 +1,13 @@
 import React, { useState, useRef } from "react";
 import Papa from "papaparse";
-import { Upload, FileCheck, AlertCircle, FileSpreadsheet, CheckCircle, Calendar } from "lucide-react";
+import {
+  Upload,
+  FileCheck,
+  AlertCircle,
+  FileSpreadsheet,
+  CheckCircle,
+  Calendar,
+} from "lucide-react";
 
 /**
  * AMEX statement CSV importer with statement-aware period selection.
@@ -13,8 +20,10 @@ import { Upload, FileCheck, AlertCircle, FileSpreadsheet, CheckCircle, Calendar 
 function tryParseDate(value) {
   const s = String(value || "").trim();
   if (!s) return null;
+
   // ISO
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
   // DD/MM/YYYY (AU default)
   const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (m) {
@@ -23,6 +32,7 @@ function tryParseDate(value) {
     const yyyy = String(Number(m[3]));
     return `${yyyy}-${mm}-${dd}`;
   }
+
   // fallback
   const t = Date.parse(s);
   if (!Number.isNaN(t)) {
@@ -32,34 +42,73 @@ function tryParseDate(value) {
     const dd = String(d.getDate()).padStart(2, "0");
     return `${yyyy}-${mm}-${dd}`;
   }
+
   return null;
 }
 
 function parseAmount(value) {
   const raw = String(value || "").trim();
   if (!raw) return 0;
+
   const neg = raw.includes("(") && raw.includes(")");
   const cleaned = raw.replace(/[()]/g, "").replace(/[$,]/g, "").trim();
   const n = Number(cleaned);
+
   if (Number.isNaN(n)) return 0;
   return neg ? -Math.abs(n) : n;
+}
+
+function isIgnoredPaymentLine(description) {
+  const d = String(description || "").toLowerCase();
+  // Your rule: ignore AMEX statement payment lines
+  return d.includes("direct debit received - thank you");
+}
+
+/**
+ * AMEX Normalization:
+ * Dashboard expects:
+ * - expenses as NEGATIVE
+ * - refunds as POSITIVE
+ *
+ * AMEX export appears:
+ * - purchases as POSITIVE
+ * - refunds as NEGATIVE
+ */
+function normalizeAmexAmount(rawAmount, description) {
+  if (isIgnoredPaymentLine(description)) {
+    return { skip: true, normalized: 0, kind: "payment" };
+  }
+
+  // Purchases positive -> expense negative
+  if (rawAmount > 0) {
+    return { skip: false, normalized: -Math.abs(rawAmount), kind: "expense" };
+  }
+
+  // Refunds negative -> refund positive
+  if (rawAmount < 0) {
+    return { skip: false, normalized: Math.abs(rawAmount), kind: "refund" };
+  }
+
+  return { skip: false, normalized: 0, kind: "expense" };
 }
 
 export default function AmexCsvImport({ onImport }) {
   const [fileName, setFileName] = useState("");
   const [error, setError] = useState("");
   const [selectedPeriod, setSelectedPeriod] = useState("");
-  const [parsedData, setParsedData] = useState(null); // Holds parsed but not confirmed data
-  const [preview, setPreview] = useState(null); // Holds summary stats
+  const [parsedData, setParsedData] = useState(null);
+  const [preview, setPreview] = useState(null);
   const fileInputRef = useRef(null);
 
-  // Generate available periods (last 24 months)
   const availablePeriods = React.useMemo(() => {
     const periods = [];
     const now = new Date();
     for (let i = 0; i < 24; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const periodKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const periodKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+        2,
+        "0"
+      )}`;
       periods.push(periodKey);
     }
     return periods;
@@ -92,7 +141,9 @@ export default function AmexCsvImport({ onImport }) {
 
         if (!fields.includes("Date") || !fields.includes("Amount")) {
           setError(
-            `Missing required columns. Expected "Date" and "Amount". Found: ${fields.join(", ")}`
+            `Missing required columns. Expected "Date" and "Amount". Found: ${fields.join(
+              ", "
+            )}`
           );
           return;
         }
@@ -100,8 +151,8 @@ export default function AmexCsvImport({ onImport }) {
         const descCol = fields.includes("Appears On Your Statement As")
           ? "Appears On Your Statement As"
           : fields.includes("Description")
-            ? "Description"
-            : null;
+          ? "Description"
+          : null;
 
         if (!descCol) {
           setError(
@@ -111,24 +162,36 @@ export default function AmexCsvImport({ onImport }) {
         }
 
         const out = [];
+        let ignoredPaymentsCount = 0;
+        let ignoredPaymentsTotal = 0;
 
         for (const row of rows) {
           const date = tryParseDate(row["Date"]);
-          const amount = parseAmount(row["Amount"]);
+          const rawAmount = parseAmount(row["Amount"]);
           const description = String(row[descCol] || "").trim();
 
           if (!date || !description) continue;
 
+          const norm = normalizeAmexAmount(rawAmount, description);
+
+          if (norm.skip) {
+            ignoredPaymentsCount += 1;
+            ignoredPaymentsTotal += Math.abs(rawAmount);
+            continue;
+          }
+
           out.push({
             date,
-            amount,
+            amount: norm.normalized,
             description,
             merchant: description,
-            periodKey: selectedPeriod, // ✅ Set periodKey from selection
+            periodKey: selectedPeriod,
             reference: String(row["Reference"] || "").trim() || null,
             card: String(row["Card Member"] || "").trim() || null,
             country: String(row["Country"] || "").trim() || null,
             account: String(row["Account #"] || "").trim() || null,
+            kind: norm.kind,
+            rawAmount,
           });
         }
 
@@ -137,28 +200,14 @@ export default function AmexCsvImport({ onImport }) {
           return;
         }
 
-        // Calculate preview summary
+        // Preview summary
         let grossPurchases = 0;
         let refunds = 0;
-        let payments = 0;
-        let transfers = 0;
 
         for (const tx of out) {
           const amt = tx.amount;
-          if (amt < 0) {
-            // Negative = expense/purchase
-            grossPurchases += Math.abs(amt);
-          } else if (amt > 0) {
-            // Positive = refund/payment/transfer
-            const desc = tx.description.toLowerCase();
-            if (desc.includes("payment") || desc.includes("thank you")) {
-              payments += amt;
-            } else if (desc.includes("transfer")) {
-              transfers += amt;
-            } else {
-              refunds += amt;
-            }
-          }
+          if (amt < 0) grossPurchases += Math.abs(amt);
+          if (amt > 0) refunds += amt;
         }
 
         const netSpend = grossPurchases - refunds;
@@ -167,11 +216,12 @@ export default function AmexCsvImport({ onImport }) {
         setPreview({
           grossPurchases,
           refunds,
-          payments,
-          transfers,
+          payments: ignoredPaymentsTotal,
+          transfers: 0,
           netSpend,
           totalCount: out.length,
-          duplicatesSkipped: 0, // Will be calculated on confirm
+          duplicatesSkipped: 0,
+          ignoredPaymentsCount,
         });
       },
       error: (e) => setError(e?.message || "Failed to parse CSV."),
@@ -181,23 +231,20 @@ export default function AmexCsvImport({ onImport }) {
   const handleConfirm = () => {
     if (!parsedData) return;
     onImport?.(parsedData);
-    // Reset
+
     setParsedData(null);
     setPreview(null);
     setFileName("");
     setSelectedPeriod("");
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleCancel = () => {
     setParsedData(null);
     setPreview(null);
     setFileName("");
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   return (
@@ -208,14 +255,15 @@ export default function AmexCsvImport({ onImport }) {
             <FileSpreadsheet className="w-6 h-6 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-gray-900 dark:text-white">Import Transaction Data</h3>
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+              Import Transaction Data
+            </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Supports AMEX CSV format. Select statement month first.
             </p>
           </div>
         </div>
 
-        {/* Statement Month Selection */}
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
             <Calendar className="w-4 h-4" />
@@ -239,10 +287,11 @@ export default function AmexCsvImport({ onImport }) {
         {!parsedData && (
           <div
             onClick={() => selectedPeriod && fileInputRef.current?.click()}
-            className={`border-2 border-dashed ${selectedPeriod
+            className={`border-2 border-dashed ${
+              selectedPeriod
                 ? "border-gray-200 dark:border-gray-600 cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 hover:bg-gray-50 dark:hover:bg-gray-700/50"
                 : "border-gray-100 dark:border-gray-700 cursor-not-allowed opacity-50"
-              } rounded-xl p-6 text-center transition-all group`}
+            } rounded-xl p-6 text-center transition-all group`}
           >
             <input
               ref={fileInputRef}
@@ -273,12 +322,13 @@ export default function AmexCsvImport({ onImport }) {
           <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 flex items-center justify-between border border-gray-100 dark:border-gray-600">
             <div className="flex items-center gap-2 overflow-hidden">
               <FileCheck className="w-4 h-4 text-green-500 shrink-0" />
-              <span className="text-sm text-gray-700 dark:text-gray-200 truncate">{fileName}</span>
+              <span className="text-sm text-gray-700 dark:text-gray-200 truncate">
+                {fileName}
+              </span>
             </div>
           </div>
         )}
 
-        {/* Preview Summary */}
         {preview && (
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-3">
@@ -290,32 +340,60 @@ export default function AmexCsvImport({ onImport }) {
 
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="bg-white dark:bg-gray-800 p-2 rounded">
-                <div className="text-xs text-gray-500 dark:text-gray-400">Gross Purchases</div>
-                <div className="font-bold text-gray-900 dark:text-white">${preview.grossPurchases.toFixed(2)}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Gross Purchases
+                </div>
+                <div className="font-bold text-gray-900 dark:text-white">
+                  ${preview.grossPurchases.toFixed(2)}
+                </div>
               </div>
               <div className="bg-white dark:bg-gray-800 p-2 rounded">
-                <div className="text-xs text-gray-500 dark:text-gray-400">Refunds</div>
-                <div className="font-bold text-emerald-600 dark:text-emerald-400">${preview.refunds.toFixed(2)}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Refunds
+                </div>
+                <div className="font-bold text-emerald-600 dark:text-emerald-400">
+                  ${preview.refunds.toFixed(2)}
+                </div>
               </div>
               <div className="bg-white dark:bg-gray-800 p-2 rounded">
-                <div className="text-xs text-gray-500 dark:text-gray-400">Payments</div>
-                <div className="font-bold text-blue-600 dark:text-blue-400">${preview.payments.toFixed(2)}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Ignored Payments (AMEX)
+                </div>
+                <div className="font-bold text-blue-600 dark:text-blue-400">
+                  ${preview.payments.toFixed(2)}
+                </div>
               </div>
               <div className="bg-white dark:bg-gray-800 p-2 rounded">
-                <div className="text-xs text-gray-500 dark:text-gray-400">Transfers</div>
-                <div className="font-bold text-purple-600 dark:text-purple-400">${preview.transfers.toFixed(2)}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Transfers
+                </div>
+                <div className="font-bold text-purple-600 dark:text-purple-400">
+                  ${preview.transfers.toFixed(2)}
+                </div>
               </div>
               <div className="bg-white dark:bg-gray-800 p-2 rounded col-span-2">
-                <div className="text-xs text-gray-500 dark:text-gray-400">Net Spend</div>
-                <div className="font-bold text-lg text-gray-900 dark:text-white">${preview.netSpend.toFixed(2)}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Net Spend
+                </div>
+                <div className="font-bold text-lg text-gray-900 dark:text-white">
+                  ${preview.netSpend.toFixed(2)}
+                </div>
               </div>
               <div className="bg-white dark:bg-gray-800 p-2 rounded">
-                <div className="text-xs text-gray-500 dark:text-gray-400">Transactions</div>
-                <div className="font-bold text-gray-900 dark:text-white">{preview.totalCount}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Transactions
+                </div>
+                <div className="font-bold text-gray-900 dark:text-white">
+                  {preview.totalCount}
+                </div>
               </div>
               <div className="bg-white dark:bg-gray-800 p-2 rounded">
-                <div className="text-xs text-gray-500 dark:text-gray-400">Duplicates Skipped</div>
-                <div className="font-bold text-yellow-600 dark:text-yellow-400">{preview.duplicatesSkipped}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Duplicates Skipped
+                </div>
+                <div className="font-bold text-yellow-600 dark:text-yellow-400">
+                  {preview.duplicatesSkipped}
+                </div>
               </div>
             </div>
 

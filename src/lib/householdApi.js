@@ -1,80 +1,24 @@
-/**
- * Household API - Communicates with Supabase Edge Function
- * Uses PIN-based authentication for household data access
- */
+const BASE = "https://wwlmkpmtojbnhiggltoa.supabase.co/functions/v1";
 
-const FUNCTION_URL = import.meta.env.VITE_SUPABASE_FUNCTION_URL;
-
-if (!FUNCTION_URL) {
-    console.warn('⚠️ VITE_SUPABASE_FUNCTION_URL not configured. Running in offline mode.');
+export async function getHouseholdState(householdKey, pin) {
+  const res = await fetch(`${BASE}/household-get`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ householdKey, pin }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json?.error || "household-get failed");
+  return json?.state ?? null;
 }
 
-/**
- * Get household state from remote
- * @param {string} pin - Household PIN
- * @returns {Promise<object|null>} - Remote state or null if not found
- */
-export async function getHouseholdState(pin) {
-    if (!FUNCTION_URL) {
-        throw new Error('Function URL not configured');
-    }
-
-    try {
-        const response = await fetch(FUNCTION_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                action: 'get',
-                pin: pin,
-            }),
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        return data.state || null;
-    } catch (err) {
-        console.error('Failed to get household state:', err);
-        throw err;
-    }
+export async function upsertHouseholdState(householdKey, pin, state, setPinIfMissing = false) {
+  const res = await fetch(`${BASE}/household-upsert`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ householdKey, pin, state, setPinIfMissing }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json?.error || "household-upsert failed");
+  return json;
 }
 
-/**
- * Upsert household state to remote
- * @param {string} pin - Household PIN
- * @param {object} state - Full application state
- * @returns {Promise<void>}
- */
-export async function upsertHouseholdState(pin, state) {
-    if (!FUNCTION_URL) {
-        throw new Error('Function URL not configured');
-    }
-
-    try {
-        const response = await fetch(FUNCTION_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                action: 'upsert',
-                pin: pin,
-                state: state,
-            }),
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        return data;
-    } catch (err) {
-        console.error('Failed to upsert household state:', err);
-        throw err;
-    }
-}

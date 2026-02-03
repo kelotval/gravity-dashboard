@@ -29,6 +29,7 @@ import { DEFAULT_OFFERS, DEFAULT_RELOCATION_SETTINGS } from "./data/relocationOf
 import { getHouseholdState, upsertHouseholdState } from "./lib/householdApi";
 import SyncIndicator from "./components/SyncIndicator";
 import HouseholdPinGate from "./components/HouseholdPinGate";
+import ResetDataModal from "./components/ResetDataModal";
 
 import { DEFAULT_STATE } from "./data";
 import { DollarSign, TrendingDown, PiggyBank, Wallet, Plus, RefreshCw, Layers, Calendar } from "lucide-react";
@@ -494,7 +495,7 @@ export default function App() {
                 setSyncStatus('loading');
 
                 // Try to fetch remote state
-                const remoteState = await getHouseholdState(householdPin);
+                const remoteState = await getHouseholdState(householdPin, householdPin);
 
                 if (remoteState && Object.keys(remoteState).length > 0) {
                     // Returning household - load remote state
@@ -527,7 +528,7 @@ export default function App() {
                         recurringExpenses,
                         activePeriodKey
                     };
-                    await upsertHouseholdState(householdPin, currentState);
+                    await upsertHouseholdState(householdPin, householdPin, currentState, true);
                     setSyncStatus('synced');
                 }
 
@@ -571,7 +572,7 @@ export default function App() {
             saveTimeoutRef.current = setTimeout(async () => {
                 try {
                     setSyncStatus('saving');
-                    await upsertHouseholdState(householdPin, payload);
+                    await upsertHouseholdState(householdPin, householdPin, payload, false);
                     setSyncStatus('synced');
                 } catch (err) {
                     console.error('Failed to sync household state:', err);
@@ -646,6 +647,9 @@ export default function App() {
 
     // Recurring Expenses Modal state
     const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
+
+    // Reset Data Modal state
+    const [isResetModalOpen, setIsResetModalOpen] = useState(false);
 
     // --- Ledger: Single Source of Truth (Core Engine) ---
     const monthlyLedger = useMemo(() => {
@@ -895,13 +899,15 @@ export default function App() {
             // Amount greater than: amt>100
             if (query.startsWith("amt>")) {
                 const amtThreshold = parseFloat(query.substring(4));
-                return !isNaN(amtThreshold) && tx.amount > amtThreshold;
+                const amt = Math.abs(parseAmount(tx.amount));
+                return Number.isFinite(amtThreshold) && amt > amtThreshold;
             }
 
             // Amount less than: amt<50
             if (query.startsWith("amt<")) {
                 const amtThreshold = parseFloat(query.substring(4));
-                return !isNaN(amtThreshold) && tx.amount < amtThreshold;
+                const amt = Math.abs(parseAmount(tx.amount));
+                return Number.isFinite(amtThreshold) && amt < amtThreshold;
             }
 
             // Date filter: date:2026-01 (matches YYYY-MM)
@@ -1146,6 +1152,19 @@ export default function App() {
         );
     };
 
+    // Helper: Detect AMEX statement payments
+    const isAmexPayment = (desc) => {
+        const s = String(desc || "").toLowerCase();
+        return [
+            "direct debit received - thank you",
+            "payment received - thank you",
+            "payment thank you",
+            "direct debit received",
+            "amex payment",
+            "american express payment"
+        ].some(k => s.includes(k));
+    };
+
     const handleAmexImport = (importedTxns) => {
         try {
             if (!Array.isArray(importedTxns) || importedTxns.length === 0) return;
@@ -1160,11 +1179,31 @@ export default function App() {
 
                     for (const t of importedTxns) {
                         const date = t.date;
-                        const amount = parseAmount(t.amount);
+                        const rawAmount = parseAmount(t.amount);
                         const description = String(t.description || t.merchant || "").trim();
 
-                        if (!date || !description || Number.isNaN(amount)) continue;
+                        if (!date || !description || Number.isNaN(rawAmount)) continue;
 
+                        // Classification order (CRITICAL):
+                        let kind;
+                        let normalizedAmount;
+
+                        if (isAmexPayment(description)) {
+                            // 1. Payment (statement repayment)
+                            kind = "payment";
+                            normalizedAmount = Math.abs(rawAmount); // Always positive
+                        } else if (rawAmount > 0) {
+                            // 2. Expense (purchase)
+                            kind = "expense";
+                            normalizedAmount = -Math.abs(rawAmount); // Negative internally
+                        } else if (rawAmount < 0) {
+                            // 3. Refund (credit)
+                            kind = "refund";
+                            normalizedAmount = Math.abs(rawAmount); // Positive internally
+                        } else {
+                            // 4. Ignore zero amount
+                            continue;
+                        }
 
                         const category = t.category || categorizeTransaction(description, categoryRules);
                         const periodKey = t.periodKey; // ✅ Already set from AmexCsvImport
@@ -1178,7 +1217,7 @@ export default function App() {
                             id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `amex-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                             date,
                             periodKey,
-                            amount,
+                            amount: normalizedAmount,
                             item: description,
                             description,
                             merchant: t.merchant || description,
@@ -1186,11 +1225,9 @@ export default function App() {
                             reference: t.reference || null,
                             source: "amex_csv",
                             importedAt: new Date().toISOString(),
-                            isManualCategory: false, // Auto-categorized from import
+                            isManualCategory: false,
+                            kind: kind // Explicitly set during import
                         };
-
-                        // Assign Kind
-                        normalized.kind = inferTransactionKind(normalized);
 
                         const key = makeTxnKey(normalized);
                         if (!existingKeys.has(key)) {
@@ -1202,12 +1239,23 @@ export default function App() {
                         }
                     }
 
+                    // Calculate import summary
+                    const purchases = toAdd.filter(tx => tx.kind === "expense").reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+                    const refunds = toAdd.filter(tx => tx.kind === "refund").reduce((sum, tx) => sum + tx.amount, 0);
+                    const payments = toAdd.filter(tx => tx.kind === "payment").reduce((sum, tx) => sum + tx.amount, 0);
+                    const netSpend = purchases - refunds;
+
                     // Show summary alert
                     setTimeout(() => {
                         alert(
                             `✓ Import Complete!\n\n` +
                             `Imported: ${imported} transaction${imported !== 1 ? 's' : ''}\n` +
-                            `Duplicates Skipped: ${duplicatesSkipped}`
+                            `Duplicates Skipped: ${duplicatesSkipped}\n\n` +
+                            `--- Summary ---\n` +
+                            `Purchases: $${purchases.toLocaleString()}\n` +
+                            `Refunds: $${refunds.toLocaleString()}\n` +
+                            `Payments: $${payments.toLocaleString()}\n` +
+                            `Net Spend: $${netSpend.toLocaleString()}`
                         );
                     }, 100);
 
@@ -1268,26 +1316,25 @@ export default function App() {
 
         return monthlyLedger.map(row => ({
             name: row.monthKey,
-            Income: row.plannedIncome,
-            Expenses: row.totalExpenses
+            Income: Number(row.plannedIncome || 0),
+            // Charts should display expenses as positive magnitudes
+            Expenses: Math.abs(Number(row.totalExpenses || 0)),
         }));
     }, [monthlyLedger]);
 
+
     const categoryData = Object.values(
         activeTransactionsSpending.reduce((acc, tx) => {
-            if (!acc[tx.category]) {
-                acc[tx.category] = { name: tx.category, value: 0 };
-            }
-            const amt = parseAmount(tx.amount);
-            if (tx.kind === "refund") {
-                // subtract refunds from the category
-                acc[tx.category].value -= Math.abs(amt);
-            } else if (tx.kind === "expense") {
-                acc[tx.category].value += Math.abs(amt);
-            }
+            const cat = tx.category || "Other";
+            if (!acc[cat]) acc[cat] = { name: cat, value: 0 };
+
+            // activeTransactionsSpending is expenses only, so just add magnitude
+            acc[cat].value += Math.abs(parseAmount(tx.amount));
+
             return acc;
         }, {})
     ).sort((a, b) => b.value - a.value);
+
 
     // 4. Render Content
     const renderContent = () => {
@@ -1806,6 +1853,38 @@ export default function App() {
 
     };
 
+    // Reset Data Handler
+    const handleResetData = async ({ clearLocal, clearCloud }) => {
+        try {
+            // Clear cloud data if requested
+
+
+            // Clear local data if requested
+            if (clearLocal) {
+                // Remove all localStorage keys
+                localStorage.removeItem(STORAGE_KEY_V2);
+                localStorage.removeItem(STORAGE_KEY_V1);
+                localStorage.removeItem('er_finance_household_pin');
+                localStorage.removeItem('incomeHistory');
+                localStorage.removeItem('recurringExpenses');
+                console.log('✅ Local data cleared');
+            }
+
+            // Reload the page to re-seed DEFAULT_STATE
+            window.location.reload();
+        } catch (err) {
+            console.error('Reset failed:', err);
+            alert('Reset failed. Please try again.');
+        }
+    };
+
+    // Listen for reset modal open event from Settings
+    useEffect(() => {
+        const handleOpenReset = () => setIsResetModalOpen(true);
+        window.addEventListener('openResetModal', handleOpenReset);
+        return () => window.removeEventListener('openResetModal', handleOpenReset);
+    }, []);
+
     // Show PIN gate if no PIN is set
     if (showPinGate) {
         return <HouseholdPinGate onPinSet={handlePinSet} />;
@@ -1864,6 +1943,12 @@ export default function App() {
                 onClose={() => setIsRecurringModalOpen(false)}
                 recurringExpenses={recurringExpenses}
                 onUpdateExpenses={setRecurringExpenses}
+            />
+            <ResetDataModal
+                isOpen={isResetModalOpen}
+                onClose={() => setIsResetModalOpen(false)}
+                onConfirm={handleResetData}
+                householdPin={householdPin}
             />
         </DashboardLayout>
     );

@@ -384,6 +384,27 @@ export default function SettingsView({ profile, income, debts, onUpdateProfile, 
                     </section>
                 )
             }
+
+            {/* Reset Data Section - Danger Zone */}
+            <section className="bg-red-50 dark:bg-red-900/10 p-6 rounded-xl shadow-sm border-2 border-red-200 dark:border-red-800">
+                <div className="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 className="text-lg font-bold text-red-900 dark:text-red-200 flex items-center">
+                            <Trash2 className="w-5 h-5 mr-2" /> Danger Zone
+                        </h3>
+                        <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                            Permanently delete all your data. This cannot be undone.
+                        </p>
+                    </div>
+                </div>
+                <button
+                    onClick={() => window.dispatchEvent(new CustomEvent('openResetModal'))}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                >
+                    <Trash2 className="w-4 h-4" />
+                    Reset Everything
+                </button>
+            </section>
         </div >
     );
 }
