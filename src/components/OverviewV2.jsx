@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { ArrowUpRight, ArrowDownRight, TrendingUp, DollarSign, Activity, Wallet, CreditCard, Layers, Eye } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, DollarSign, Activity, Wallet, CreditCard, Layers, Eye } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
 // --- Helper Components ---
@@ -69,16 +69,16 @@ export default function OverviewV2({
     const fmt = (n) => n?.toLocaleString();
 
     return (
-        <div className={`min-h-screen bg-[#0B0E14] text-white p-6 space-y-6 transition-opacity duration-1000 ${animate ? 'opacity-100' : 'opacity-0'}`}>
+        <div className={`min-h-screen bg-[#0B0E14] text-white p-3 sm:p-6 space-y-4 sm:space-y-6 transition-opacity duration-1000 ${animate ? 'opacity-100' : 'opacity-0'}`}>
 
             {/* Header Section */}
-            <header className="flex justify-between items-end mb-8">
+            <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-6 sm:mb-8 gap-4">
                 <div>
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-100 to-gray-500 bg-clip-text text-transparent mb-1">
+                    <h1 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-gray-100 to-gray-500 bg-clip-text text-transparent mb-1">
                         Financial Overview
                     </h1>
-                    <div className="flex items-center gap-2 text-gray-500 font-medium">
-                        <span>Your wealth strategy command center</span>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 text-gray-500 font-medium text-sm">
+                        <span className="hidden sm:inline">Your wealth strategy command center</span>
                         <span className="text-xs px-2 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700">
                             Viewing: {activeMonth}
                         </span>
@@ -115,41 +115,41 @@ export default function OverviewV2({
                         })()}
                     </div>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
                     {/* Month Selector */}
-                    <div className="relative">
+                    <div className="relative flex-1 sm:flex-initial">
                         <select
                             value={activeMonth}
                             onChange={(e) => setActiveMonth(e.target.value)}
-                            className="appearance-none bg-gray-900 border border-gray-700 text-white pl-4 pr-10 py-2 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 hover:bg-gray-800 transition-colors"
+                            className="appearance-none bg-gray-900 border border-gray-700 text-white pl-3 sm:pl-4 pr-8 sm:pr-10 py-2 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 hover:bg-gray-800 transition-colors w-full"
                         >
                             {availableMonths.map(m => (
                                 <option key={m} value={m}>{m} {m === new Date().toISOString().substring(0, 7) ? '(Current)' : ''}</option>
                             ))}
                             {!availableMonths.includes(activeMonth) && <option value={activeMonth}>{activeMonth}</option>}
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
-                            <Layers className="w-4 h-4" />
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 sm:px-3 text-gray-400">
+                            <Layers className="w-3 h-3 sm:w-4 sm:h-4" />
                         </div>
                     </div>
 
                     <button
                         onClick={() => handleNavigate('transactions')}
-                        className="px-4 py-2 bg-gray-800/50 hover:bg-gray-800 text-gray-300 rounded-xl text-sm font-medium transition-all border border-white/5 flex items-center gap-2"
+                        className="px-3 sm:px-4 py-2 bg-gray-800/50 hover:bg-gray-800 text-gray-300 rounded-xl text-xs sm:text-sm font-medium transition-all border border-white/5 flex items-center gap-1 sm:gap-2"
                     >
-                        <CreditCard className="w-4 h-4" /> Recent Txns
+                        <CreditCard className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Recent Txns</span><span className="sm:hidden">Txns</span>
                     </button>
                     <button
                         onClick={() => handleNavigate('scenarios')}
-                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2"
+                        className="px-3 sm:px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs sm:text-sm font-bold shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-1 sm:gap-2"
                     >
-                        <Activity className="w-4 h-4" /> Simulator
+                        <Activity className="w-3 h-3 sm:w-4 sm:h-4" /> Simulator
                     </button>
                 </div>
             </header>
 
             {/* Grid Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
 
                 {/* 1. Hero Card: Net Worth (Spans 8 cols) */}
                 <GlassCard className="lg:col-span-8 flex flex-col justify-between min-h-[300px] relative overflow-hidden group">
@@ -164,20 +164,20 @@ export default function OverviewV2({
                                 </div>
                                 <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">Total Net Worth</span>
                             </div>
-                            <div className="text-6xl font-extrabold tracking-tight text-white mt-4">
+                            <div className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white mt-4">
                                 ${fmt(netWorth)}
                             </div>
                             <div className="mt-2 text-sm font-medium text-gray-400">
                                 {netWorth < 0 ? "Net worth improving, but still below zero" : "Net worth positive and growing"}
                             </div>
-                            <div className="mt-4 flex gap-4">
+                            <div className="mt-4 flex flex-col sm:flex-row gap-2 sm:gap-4">
                                 <StatBadge value="+12.5%" label="Change vs last month" isPositive={true} />
                                 <StatBadge value="+$145k" label="12-month trajectory" isPositive={true} />
                             </div>
                         </div>
 
                         {/* Health Score Circular Gauge */}
-                        <div className="relative w-32 h-32 flex items-center justify-center">
+                        <div className="relative w-24 h-24 sm:w-32 sm:h-32 flex items-center justify-center">
                             <svg className="w-full h-full transform -rotate-90">
                                 <circle cx="64" cy="64" r="56" stroke="CurrentColor" strokeWidth="8" fill="none" className="text-gray-800" />
                                 <circle
@@ -389,47 +389,215 @@ export default function OverviewV2({
                     </div>
                 </GlassCard >
 
-                {/* 4. Recent Transactions Table (Spans 12 cols, distinct aesthetic) */}
-                < div className="lg:col-span-12" >
-                    <h3 className="text-gray-400 font-bold uppercase text-xs tracking-wider mb-4 ml-2">Recent Activity</h3>
-                    <div className="bg-gray-900/40 border border-white/5 rounded-3xl overflow-hidden">
-                        <table className="w-full text-left text-sm text-gray-400">
-                            <thead className="bg-gray-900/50 text-xs uppercase font-bold text-gray-500">
-                                <tr>
-                                    <th className="px-6 py-4">Transaction</th>
-                                    <th className="px-6 py-4">Date</th>
-                                    <th className="px-6 py-4">Category</th>
-                                    <th className="px-6 py-4 text-right">Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-800">
-                                {transactions.slice(0, 5).map((tx) => {
-                                    const isNegativeImpact = ['Gambling', 'Fees', 'Interest', 'Loans'].includes(tx.category);
-                                    return (
-                                        <tr key={tx.id} className={`hover:bg-white/5 transition-colors ${isNegativeImpact ? 'bg-rose-500/5' : ''}`}>
-                                            <td className="px-6 py-5">
-                                                <span className="font-bold text-white block text-sm">{tx.item || tx.description}</span>
-                                            </td>
-                                            <td className="px-6 py-5 text-gray-500 text-xs font-mono">{tx.date}</td>
-                                            <td className="px-6 py-5">
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`w-2 h-2 rounded-full ${isNegativeImpact ? 'bg-rose-500' : 'bg-indigo-500'}`}></span>
-                                                    <span className="px-2 py-1 rounded bg-gray-800 text-gray-300 text-xs">{tx.category}</span>
-                                                </div>
-                                            </td>
-                                            <td className={`px-6 py-5 text-right font-bold font-mono tracking-tight ${tx.amount > 0 ? 'text-white' : 'text-emerald-400'}`}>
-                                                ${Math.abs(tx.amount).toFixed(2)}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                        <div className="p-4 bg-gray-900/50 text-center">
-                            <button onClick={() => handleNavigate('transactions')} className="text-indigo-400 text-sm font-bold hover:text-indigo-300">View All Transactions</button>
-                        </div>
+                {/* 4. Quick Action Insights (Spans 12 cols) */}
+                <div className="lg:col-span-12">
+                    <h3 className="text-gray-400 font-bold uppercase text-xs tracking-wider mb-3 sm:mb-4 ml-1 sm:ml-2">Quick Action Insights</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
+                        {/* Largest Expense This Month */}
+                        {(() => {
+                            const thisMonthTx = transactions.filter(t => (t.periodKey || t.date?.slice(0, 7)) === activeMonth);
+                            const expenses = thisMonthTx.filter(tx => tx.amount < 0 && tx.kind !== 'transfer');
+                            const largest = expenses.sort((a, b) => a.amount - b.amount)[0];
+
+                            return (
+                                <GlassCard className="hover:border-rose-500/30 transition-all cursor-pointer group">
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div className="p-3 bg-rose-500/10 rounded-xl group-hover:bg-rose-500/20 transition-colors">
+                                            <TrendingDown className="w-5 h-5 text-rose-400" />
+                                        </div>
+                                        <span className="text-xs text-gray-500 font-mono">{activeMonth}</span>
+                                    </div>
+                                    <div className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Largest Expense</div>
+                                    {largest ? (
+                                        <>
+                                            <div className="text-2xl font-bold text-white mb-1">${Math.abs(largest.amount).toLocaleString()}</div>
+                                            <div className="text-sm text-gray-400 truncate">{largest.item || largest.description}</div>
+                                            <div className="mt-2 text-xs text-rose-400 font-medium">{largest.category}</div>
+                                        </>
+                                    ) : (
+                                        <div className="text-sm text-gray-500">No expenses yet</div>
+                                    )}
+                                </GlassCard>
+                            );
+                        })()}
+
+                        {/* Spending Trend */}
+                        {(() => {
+                            const currentLedger = monthlyLedger.find(l => l.monthKey === activeMonth);
+                            const currentMonthIndex = monthlyLedger.findIndex(l => l.monthKey === activeMonth);
+                            const previousLedger = currentMonthIndex > 0 ? monthlyLedger[currentMonthIndex - 1] : null;
+
+                            const currentExpenses = currentLedger?.totalExpenses || 0;
+                            const previousExpenses = previousLedger?.totalExpenses || 0;
+                            const change = previousExpenses > 0 ? ((currentExpenses - previousExpenses) / previousExpenses) * 100 : 0;
+                            const isUp = change > 0;
+
+                            return (
+                                <GlassCard className={`hover:border-${isUp ? 'rose' : 'emerald'}-500/30 transition-all cursor-pointer group`}>
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div className={`p-3 bg-${isUp ? 'rose' : 'emerald'}-500/10 rounded-xl group-hover:bg-${isUp ? 'rose' : 'emerald'}-500/20 transition-colors`}>
+                                            <Activity className={`w-5 h-5 text-${isUp ? 'rose' : 'emerald'}-400`} />
+                                        </div>
+                                        <span className="text-xs text-gray-500 font-mono">vs Last Month</span>
+                                    </div>
+                                    <div className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Spending Trend</div>
+                                    <div className="flex items-baseline gap-2 mb-1">
+                                        <div className="text-2xl font-bold text-white">${currentExpenses.toLocaleString()}</div>
+                                        {previousExpenses > 0 && (
+                                            <div className={`flex items-center gap-1 text-sm font-bold ${isUp ? 'text-rose-400' : 'text-emerald-400'}`}>
+                                                {isUp ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                                                {Math.abs(change).toFixed(1)}%
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="text-sm text-gray-400">
+                                        {isUp ? 'Spending increased' : 'Spending decreased'}
+                                    </div>
+                                </GlassCard>
+                            );
+                        })()}
+
+                        {/* Upcoming Bills Alert */}
+                        {(() => {
+                            // This is a placeholder - you'd need to pass recurringExpenses as a prop
+                            // For now, we'll show a simple alert based on debt payments
+                            const highPriorityDebts = debts.filter(d => d.accent === 'red').length;
+
+                            return (
+                                <GlassCard className="hover:border-orange-500/30 transition-all cursor-pointer group">
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div className="p-3 bg-orange-500/10 rounded-xl group-hover:bg-orange-500/20 transition-colors">
+                                            <CreditCard className="w-5 h-5 text-orange-400" />
+                                        </div>
+                                        <span className="text-xs text-gray-500 font-mono">Priority</span>
+                                    </div>
+                                    <div className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Payment Focus</div>
+                                    <div className="text-2xl font-bold text-white mb-1">{highPriorityDebts}</div>
+                                    <div className="text-sm text-gray-400">
+                                        {highPriorityDebts === 0 ? 'No urgent payments' :
+                                            highPriorityDebts === 1 ? 'High-priority debt' :
+                                                'High-priority debts'}
+                                    </div>
+                                    {highPriorityDebts > 0 && (
+                                        <div className="mt-2 text-xs text-orange-400 font-medium">Requires attention</div>
+                                    )}
+                                </GlassCard>
+                            );
+                        })()}
+
+                        {/* Budget Status */}
+                        {(() => {
+                            const currentLedger = monthlyLedger.find(l => l.monthKey === activeMonth);
+                            const income = currentLedger?.totalIncome || 0;
+                            const expenses = currentLedger?.totalExpenses || 0;
+                            const savingsRate = income > 0 ? ((income - expenses) / income) * 100 : 0;
+                            const isHealthy = savingsRate >= 20;
+
+                            return (
+                                <GlassCard className={`hover:border-${isHealthy ? 'emerald' : 'yellow'}-500/30 transition-all cursor-pointer group`}>
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div className={`p-3 bg-${isHealthy ? 'emerald' : 'yellow'}-500/10 rounded-xl group-hover:bg-${isHealthy ? 'emerald' : 'yellow'}-500/20 transition-colors`}>
+                                            <Wallet className={`w-5 h-5 text-${isHealthy ? 'emerald' : 'yellow'}-400`} />
+                                        </div>
+                                        <span className="text-xs text-gray-500 font-mono">Target: 20%</span>
+                                    </div>
+                                    <div className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Savings Rate</div>
+                                    <div className="text-2xl font-bold text-white mb-1">{savingsRate.toFixed(1)}%</div>
+                                    <div className="text-sm text-gray-400">
+                                        {isHealthy ? 'On track!' : 'Below target'}
+                                    </div>
+                                    {!isHealthy && savingsRate > 0 && (
+                                        <div className="mt-2 text-xs text-yellow-400 font-medium">
+                                            {(20 - savingsRate).toFixed(1)}% to goal
+                                        </div>
+                                    )}
+                                </GlassCard>
+                            );
+                        })()}
+
                     </div>
-                </div >
+                </div>
+
+                {/* 5. Category Spending Breakdown */}
+                <div className="lg:col-span-12">
+                    <h3 className="text-gray-400 font-bold uppercase text-xs tracking-wider mb-3 sm:mb-4 ml-1 sm:ml-2">Spending by Category</h3>
+                    <GlassCard>
+                        {(() => {
+                            const thisMonthTx = transactions.filter(t => (t.periodKey || t.date?.slice(0, 7)) === activeMonth);
+                            const expenses = thisMonthTx.filter(tx => tx.amount < 0 && tx.kind !== 'transfer');
+
+                            // Group by category
+                            const categoryMap = {};
+                            expenses.forEach(tx => {
+                                const cat = tx.category || 'Uncategorized';
+                                categoryMap[cat] = (categoryMap[cat] || 0) + Math.abs(tx.amount);
+                            });
+
+                            // Sort and get top 6
+                            const sortedCategories = Object.entries(categoryMap)
+                                .sort((a, b) => b[1] - a[1])
+                                .slice(0, 6);
+
+                            const totalExpenses = expenses.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+
+                            if (sortedCategories.length === 0) {
+                                return (
+                                    <div className="text-center py-12 text-gray-500">
+                                        <Activity className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                                        <p>No expenses recorded for {activeMonth}</p>
+                                    </div>
+                                );
+                            }
+
+                            return (
+                                <div className="space-y-4">
+                                    {sortedCategories.map(([category, amount], index) => {
+                                        const percentage = (amount / totalExpenses) * 100;
+                                        const colors = [
+                                            'bg-indigo-500',
+                                            'bg-purple-500',
+                                            'bg-pink-500',
+                                            'bg-rose-500',
+                                            'bg-orange-500',
+                                            'bg-yellow-500'
+                                        ];
+                                        const color = colors[index % colors.length];
+
+                                        return (
+                                            <div key={category} className="group">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-3 h-3 rounded-full ${color}`}></div>
+                                                        <span className="text-white font-medium">{category}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-gray-400 text-sm font-mono">{percentage.toFixed(1)}%</span>
+                                                        <span className="text-white font-bold font-mono">${amount.toLocaleString()}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="h-2 bg-gray-800/50 rounded-full overflow-hidden">
+                                                    <div
+                                                        className={`h-full ${color} transition-all duration-500 ease-out group-hover:opacity-80`}
+                                                        style={{ width: `${percentage}%` }}
+                                                    ></div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+
+                                    {/* Total */}
+                                    <div className="pt-4 mt-4 border-t border-gray-700/50">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-400 font-bold uppercase text-xs tracking-wider">Total Expenses</span>
+                                            <span className="text-white text-xl font-bold font-mono">${totalExpenses.toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+                    </GlassCard>
+                </div>
 
             </div >
         </div >

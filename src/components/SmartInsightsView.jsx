@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Sparkles, TrendingUp, TrendingDown, AlertTriangle, Coffee, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 
-export default function SmartInsightsView({ transactions, income, debts }) {
+export default function SmartInsightsView({ transactions, income, debts, periodLabel = "Current Month" }) {
     const [insights, setInsights] = useState([]);
 
     useEffect(() => {
@@ -11,7 +11,10 @@ export default function SmartInsightsView({ transactions, income, debts }) {
 
         // 1. Calculate Totals
         const fullIncome = Object.values(income).reduce((a, b) => a + b, 0);
-        const totalExpenses = transactions.reduce((acc, tx) => acc + tx.amount, 0);
+        // FIX: Expenses are stored as negative numbers, so we need to sum absolute values
+        const totalExpenses = transactions
+            .filter(tx => tx.amount < 0 && tx.kind !== 'transfer')
+            .reduce((acc, tx) => acc + Math.abs(tx.amount), 0);
         const savingsRate = fullIncome > 0 ? ((fullIncome - totalExpenses) / fullIncome) * 100 : 0;
         const monthlySavings = fullIncome - totalExpenses;
         const annualSavings = monthlySavings * 12;
@@ -19,7 +22,10 @@ export default function SmartInsightsView({ transactions, income, debts }) {
         // 2. Spending Analysis
         const categoryMap = {};
         transactions.forEach(tx => {
-            categoryMap[tx.category] = (categoryMap[tx.category] || 0) + tx.amount;
+            // FIX: Only count expenses (negative amounts), use absolute value
+            if (tx.amount < 0 && tx.kind !== 'transfer') {
+                categoryMap[tx.category] = (categoryMap[tx.category] || 0) + Math.abs(tx.amount);
+            }
         });
         const categories = Object.entries(categoryMap).sort((a, b) => b[1] - a[1]);
         const topCategory = categories[0];
@@ -162,6 +168,7 @@ export default function SmartInsightsView({ transactions, income, debts }) {
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">AI Financial Assistant</h2>
                 <p className="text-gray-500 dark:text-gray-400">Smart observations based on your real-time data.</p>
+                <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium mt-1">Analysis Period: {periodLabel}</p>
             </div>
 
             {/* Visual Summary Dashboard */}
@@ -199,7 +206,10 @@ export default function SmartInsightsView({ transactions, income, debts }) {
                     <div className="text-3xl font-bold mb-1">
                         {(() => {
                             const fullIncome = Object.values(income).reduce((a, b) => a + b, 0);
-                            const totalExpenses = transactions.reduce((acc, tx) => acc + tx.amount, 0);
+                            // FIX: Expenses are negative, filter and use absolute value
+                            const totalExpenses = transactions
+                                .filter(tx => tx.amount < 0 && tx.kind !== 'transfer')
+                                .reduce((acc, tx) => acc + Math.abs(tx.amount), 0);
                             const savingsRate = fullIncome > 0 ? ((fullIncome - totalExpenses) / fullIncome) * 100 : 0;
                             return savingsRate >= 0 ? `${Math.round(savingsRate)}%` : '0%';
                         })()}
@@ -207,7 +217,10 @@ export default function SmartInsightsView({ transactions, income, debts }) {
                     <div className="text-emerald-200 text-xs leading-tight">
                         {(() => {
                             const fullIncome = Object.values(income).reduce((a, b) => a + b, 0);
-                            const totalExpenses = transactions.reduce((acc, tx) => acc + tx.amount, 0);
+                            // FIX: Expenses are negative, filter and use absolute value
+                            const totalExpenses = transactions
+                                .filter(tx => tx.amount < 0 && tx.kind !== 'transfer')
+                                .reduce((acc, tx) => acc + Math.abs(tx.amount), 0);
                             const savingsRate = fullIncome > 0 ? ((fullIncome - totalExpenses) / fullIncome) * 100 : 0;
                             return savingsRate > 20 ? 'Excellent! Above target' :
                                 savingsRate > 10 ? 'Good, room to improve' :
@@ -336,8 +349,15 @@ export default function SmartInsightsView({ transactions, income, debts }) {
                                 <div className="space-y-3">
                                     {(() => {
                                         const catMap = {};
-                                        transactions.forEach(tx => catMap[tx.category] = (catMap[tx.category] || 0) + tx.amount);
-                                        const totalExp = transactions.reduce((a, t) => a + t.amount, 0);
+                                        // FIX: Only count expenses, use absolute value
+                                        transactions.forEach(tx => {
+                                            if (tx.amount < 0 && tx.kind !== 'transfer') {
+                                                catMap[tx.category] = (catMap[tx.category] || 0) + Math.abs(tx.amount);
+                                            }
+                                        });
+                                        const totalExp = transactions
+                                            .filter(tx => tx.amount < 0 && tx.kind !== 'transfer')
+                                            .reduce((a, t) => a + Math.abs(t.amount), 0);
 
                                         return Object.entries(catMap)
                                             .sort((a, b) => b[1] - a[1])

@@ -2,7 +2,7 @@ export const DEFAULT_STATE = {
     profile: {
         householdName: "Eric & Rebecca",
         statusText: "On Track",
-        assets: 125000,
+        assets: 0,
     },
     income: {
         salaryEric: 8524,

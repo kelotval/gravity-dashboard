@@ -2,19 +2,27 @@ import React, { useMemo } from "react";
 import { Lightbulb, TrendingUp, TrendingDown, AlertCircle, CheckCircle, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 
-export default function InsightsCard({ transactions, income, debts, savingsRate, onAction }) {
+export default function InsightsCard({ transactions, income, plannedIncome, debts, savingsRate, onAction }) {
     const insights = useMemo(() => {
         const list = [];
         const currentMonth = new Date().getMonth();
 
         // 1. Savings Insight
         const rate = parseFloat(savingsRate);
-        const fullIncome = Object.values(income).reduce((a, b) => a + b, 0);
-        const totalExpenses = transactions.reduce((acc, tx) => acc + tx.amount, 0);
+
+        // Use monthly planned income if available, otherwise fallback to global annual/monthly state
+        const fullIncome = plannedIncome || Object.values(income).reduce((a, b) => a + b, 0);
+
+        // Correctly calculate expenses: sum of absolute values of negative amounts (or just absolute)
+        // Expenses are stored as negative numbers now.
+        const totalExpenses = transactions
+            .filter(tx => tx.amount < 0 && tx.kind !== 'transfer') // Filter only real expenses
+            .reduce((acc, tx) => acc + Math.abs(tx.amount), 0);
+
         const monthlySavings = fullIncome - totalExpenses;
 
         if (rate >= 20) {
-            const monthsToFund = Math.ceil(15000 / monthlySavings);
+            const monthsToFund = Math.ceil(15000 / (monthlySavings || 1)); // Prevent div by zero
 
             list.push({
                 type: "success",
@@ -55,7 +63,9 @@ export default function InsightsCard({ transactions, income, debts, savingsRate,
 
         // 2. Spending Insight (Top Category)
         const categories = transactions.reduce((acc, tx) => {
-            acc[tx.category] = (acc[tx.category] || 0) + tx.amount;
+            if (tx.amount < 0 && tx.kind !== 'transfer') {
+                acc[tx.category] = (acc[tx.category] || 0) + Math.abs(tx.amount);
+            }
             return acc;
         }, {});
         const topCategory = Object.entries(categories).sort((a, b) => b[1] - a[1])[0];
@@ -106,7 +116,7 @@ export default function InsightsCard({ transactions, income, debts, savingsRate,
 
         // 4. Subscription Check (Simple heuristic)
         const subCount = transactions.filter(t => t.category === 'Subscriptions').length;
-        const subTotal = categories['Subscriptions'] || 0;
+        const subTotal = categories['Subscriptions'] || 0; // Already calculated above
         if (subCount > 2 && subTotal > 0) {
             const reduction = Math.round(subTotal * 0.3);
             const annualSavings = reduction * 12;

@@ -847,18 +847,39 @@ export default function App() {
                 }, 0);
 
             // Calculate totals from all transactions
-            // Calculate totals from all transactions
-            const debugExpenses = periodTransactions.filter(tx => isOutflow(tx));
+            // CRITICAL: Exclude transfers from expenses to prevent inflation
+            const debugExpenses = periodTransactions.filter(tx => {
+                // Must be an expense
+                if (!isOutflow(tx)) return false;
+                // Explicitly exclude transfers (even if misclassified as expense)
+                if (tx.kind === 'transfer' || tx.category === 'Transfers') return false;
+                return true;
+            });
             const expenseSum = debugExpenses.reduce((sum, tx) => sum + normalizeAmount(tx), 0);
 
-            if (periodKey === '2025-12' || periodKey === '2026-01') {
-                console.log(`[DEBUG ${periodKey}] Ledger Calc:`, {
-                    totalTx: periodTransactions.length,
-                    expenseTxCount: debugExpenses.length,
-                    sampleExpense: debugExpenses[0],
-                    expenseSum,
-                    calcTotal: Math.abs(expenseSum)
+            if (periodKey === '2026-02') {
+                console.log(`\n========== [DEBUG ${periodKey}] Ledger Calculation ==========`);
+                console.log(`Total Transactions: ${periodTransactions.length}`);
+                console.log(`Expense Count (after filtering): ${debugExpenses.length}`);
+                console.log(`Expense Sum: ${expenseSum}`);
+                console.log(`Total Expenses (abs): ${Math.abs(expenseSum)}`);
+
+                const transferCount = periodTransactions.filter(tx =>
+                    tx.kind === 'transfer' || tx.category === 'Transfers'
+                ).length;
+                console.log(`Transfers Filtered Out: ${transferCount}`);
+
+                const allExpenseLike = periodTransactions.filter(tx => isOutflow(tx));
+                console.log(`\nAll Expense-Like Transactions (${allExpenseLike.length}):`);
+                allExpenseLike.forEach((tx, i) => {
+                    console.log(`  ${i + 1}. ${tx.description || tx.item || tx.merchant} | Amount: ${tx.amount} | Kind: ${tx.kind} | Category: ${tx.category}`);
                 });
+
+                console.log(`\nFinal Expenses After Transfer Filter (${debugExpenses.length}):`);
+                debugExpenses.slice(0, 5).forEach((tx, i) => {
+                    console.log(`  ${i + 1}. ${tx.description || tx.item || tx.merchant} | Amount: ${tx.amount} | Kind: ${tx.kind} | Category: ${tx.category}`);
+                });
+                console.log(`========================================\n`);
             }
 
             const totalExpenses = Math.abs(expenseSum);
@@ -979,6 +1000,18 @@ export default function App() {
     const netCashflow = activeLedgerEntry.netDelta;
     const netSavings = activeLedgerEntry.netDelta;
     const savingsRate = activePlannedIncome > 0 ? ((netSavings / activePlannedIncome) * 100).toFixed(1) : "0.0";
+
+    // DEBUG: Log savings rate calculation
+    if (activePeriodKey === '2026-02') {
+        console.log('\n========== SAVINGS RATE CALCULATION ==========');
+        console.log(`Active Period: ${activePeriodKey}`);
+        console.log(`Planned Income: $${activePlannedIncome}`);
+        console.log(`Total Expenses: $${totalExpenses}`);
+        console.log(`Net Savings (netDelta): $${netSavings}`);
+        console.log(`Calculated Savings Rate: ${savingsRate}%`);
+        console.log(`Expected: (${netSavings} / ${activePlannedIncome}) * 100 = ${(netSavings / activePlannedIncome) * 100}%`);
+        console.log('==============================================\n');
+    }
 
     // Re-calculate Accounting breakdown for the Panel (using Ledger data where possible, or granular if needed)
     // The Ledger aggregates totals. Does it expose breakdown of purchases vs refunds?
@@ -1674,11 +1707,31 @@ export default function App() {
         }
 
         if (currentTab === "insights") {
+            // Use last completed month for more accurate insights
+            const today = new Date();
+            const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const lastMonthKey = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
+
+            // Get transactions for last completed month
+            const lastMonthTransactions = getComputedTransactionsForMonth(
+                lastMonthKey,
+                transactions,
+                recurringExpenses
+            ).map(tx => ({
+                ...tx,
+                kind: tx.kind || inferTransactionKind(tx)
+            }));
+
+            // Get income for last month from ledger
+            const lastMonthLedgerEntry = getActiveLedgerRow(lastMonthKey, monthlyLedger);
+            const lastMonthIncome = lastMonthLedgerEntry.plannedIncome;
+
             return (
                 <SmartInsightsView
-                    transactions={transactions}
-                    income={income}
+                    transactions={lastMonthTransactions}
+                    income={{ monthly: lastMonthIncome }}
                     debts={debts}
+                    periodLabel={`${lastMonth.toLocaleString('default', { month: 'long' })} ${lastMonth.getFullYear()}`}
                 />
             );
         }
@@ -2098,6 +2151,7 @@ export default function App() {
                             <InsightsCard
                                 transactions={activeTransactionsAll}
                                 income={income}
+                                plannedIncome={activePlannedIncome} // Pass explicit monthly income
                                 debts={debts}
                                 savingsRate={savingsRate}
                                 onAction={handleInsightAction}
