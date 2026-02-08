@@ -1999,10 +1999,17 @@ export default function App() {
     };
 
     // Reset Data Handler
+    // Reset Data Handler
     const handleResetData = async ({ clearLocal, clearCloud }) => {
         try {
             // Clear cloud data if requested
-
+            if (clearCloud && householdPin) {
+                // Determine if we are deleting or just resetting
+                // Actually the API supports 'delete' action which wipes the row
+                const { deleteHouseholdState } = await import("./lib/householdApi");
+                await deleteHouseholdState(householdPin);
+                console.log('✅ Cloud data cleared');
+            }
 
             // Clear local data if requested
             if (clearLocal) {

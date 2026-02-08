@@ -4,9 +4,14 @@
  */
 
 const FUNCTION_URL = import.meta.env.VITE_SUPABASE_FUNCTION_URL;
+const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!FUNCTION_URL) {
   console.warn('⚠️ VITE_SUPABASE_FUNCTION_URL not configured. Running in offline mode.');
+}
+
+if (!ANON_KEY) {
+  console.warn('⚠️ VITE_SUPABASE_ANON_KEY not configured. Cloud sync may fail.');
 }
 
 /**
@@ -24,6 +29,7 @@ export async function getHouseholdState(pin) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${ANON_KEY}`
       },
       body: JSON.stringify({
         action: 'get',
@@ -32,7 +38,10 @@ export async function getHouseholdState(pin) {
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`Status: ${response.status}`, `Headers:`, [...response.headers.entries()]);
+      console.error(`Body:`, errorText);
+      throw new Error(`HTTP ${response.status}: ${response.statusText || errorText}`);
     }
 
     const data = await response.json();
@@ -59,6 +68,7 @@ export async function upsertHouseholdState(pin, state) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${ANON_KEY}`
       },
       body: JSON.stringify({
         action: 'upsert',
@@ -68,7 +78,10 @@ export async function upsertHouseholdState(pin, state) {
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`Status: ${response.status}`, `Headers:`, [...response.headers.entries()]);
+      console.error(`Body:`, errorText);
+      throw new Error(`HTTP ${response.status}: ${response.statusText || errorText}`);
     }
 
     const data = await response.json();
@@ -94,6 +107,7 @@ export async function deleteHouseholdState(pin) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${ANON_KEY}`
       },
       body: JSON.stringify({
         action: 'delete',
@@ -102,7 +116,10 @@ export async function deleteHouseholdState(pin) {
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`Status: ${response.status}`, `Headers:`, [...response.headers.entries()]);
+      console.error(`Body:`, errorText);
+      throw new Error(`HTTP ${response.status}: ${response.statusText || errorText}`);
     }
 
     const data = await response.json();
