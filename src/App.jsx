@@ -846,6 +846,11 @@ export default function App() {
                     return sum + parseAmount(amount);
                 }, 0);
 
+            // Calculate total debt payments for this period
+            const debtPayments = debts.reduce((sum, debt) => {
+                return sum + (debt.monthlyRepayment || 0);
+            }, 0);
+
             // Calculate totals from all transactions
             // CRITICAL: Exclude transfers from expenses to prevent inflation
             const debugExpenses = periodTransactions.filter(tx => {
@@ -862,7 +867,8 @@ export default function App() {
                 console.log(`Total Transactions: ${periodTransactions.length}`);
                 console.log(`Expense Count (after filtering): ${debugExpenses.length}`);
                 console.log(`Expense Sum: ${expenseSum}`);
-                console.log(`Total Expenses (abs): ${Math.abs(expenseSum)}`);
+                console.log(`Debt Payments: ${debtPayments}`);
+                console.log(`Total Expenses (abs + debt): ${Math.abs(expenseSum) + debtPayments}`);
 
                 const transferCount = periodTransactions.filter(tx =>
                     tx.kind === 'transfer' || tx.category === 'Transfers'
@@ -882,7 +888,8 @@ export default function App() {
                 console.log(`========================================\n`);
             }
 
-            const totalExpenses = Math.abs(expenseSum);
+            // Include debt payments in total expenses
+            const totalExpenses = Math.abs(expenseSum) + debtPayments;
 
             const totalInflows = periodTransactions
                 .filter(tx => isInflow(tx))
@@ -894,8 +901,9 @@ export default function App() {
                 monthKey: periodKey,
                 totalIncome,
                 plannedIncome: totalIncome,  // Alias for compatibility
-                totalExpenses,
+                totalExpenses,  // Now includes debt payments
                 recurringSpend,
+                debtPayments,  // Track separately for transparency
                 netSavings,
                 savingsRate: totalIncome > 0 ? (netSavings / totalIncome) * 100 : 0,
                 transactionCount: periodTransactions.length,
@@ -1037,10 +1045,11 @@ export default function App() {
 
         const ledgerExpenses = activeLedgerEntry.totalExpenses;
         const ledgerRecurring = activeLedgerEntry.recurringSpend;
+        const ledgerDebtPayments = activeLedgerEntry.debtPayments || 0;
 
-        // For fair comparison: add recurring back to real expenses
-        // because ledger totalExpenses = amexNetSpend + recurringSpend
-        const calculatedTotal = realExpensesOnly + ledgerRecurring;
+        // For fair comparison: add recurring and debt payments back to real expenses
+        // because ledger totalExpenses = amexNetSpend + recurringSpend + debtPayments
+        const calculatedTotal = realExpensesOnly + ledgerRecurring + ledgerDebtPayments;
         const delta = Math.abs(calculatedTotal - ledgerExpenses);
 
         return {
@@ -1049,7 +1058,7 @@ export default function App() {
             delta,
             hasMismatch: delta > 1  // More than $1 difference
         };
-    }, [activeTransactionsAll, activeLedgerEntry.totalExpenses, activeLedgerEntry.recurringSpend]);
+    }, [activeTransactionsAll, activeLedgerEntry.totalExpenses, activeLedgerEntry.recurringSpend, activeLedgerEntry.debtPayments]);
 
     // Financial Health Calculations
     // Note: Debt Balances and Net Worth are effectively "Snapshot" or "Global"
