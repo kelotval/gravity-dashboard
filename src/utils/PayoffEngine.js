@@ -484,56 +484,42 @@ export const calculateInterestProjections = (debts) => {
         // "split the window into before/after days"
 
         const calculateProjectedInterest = (months) => {
-            const endDate = new Date(today);
-            endDate.setMonth(endDate.getMonth() + months);
+            // FIXED: Use proper amortization with declining balance
+            let balance = debt.currentBalance;
+            let totalInterest = 0;
+            const monthlyPayment = debt.monthlyRepayment || 0;
 
             let effectiveChangeDate = null;
             if (debt.promoEndDate) effectiveChangeDate = new Date(debt.promoEndDate);
             else if (debt.rateChangeEffectiveDate) effectiveChangeDate = new Date(debt.rateChangeEffectiveDate);
             if (effectiveChangeDate) effectiveChangeDate.setHours(0, 0, 0, 0);
 
-            // Determine rates
-            let currentRate = debt.interestRate || 0;
-            let futureRate = currentRate;
+            for (let m = 0; m < months; m++) {
+                // Determine active rate for this specific month
+                const monthDate = new Date(today);
+                monthDate.setMonth(today.getMonth() + m);
 
-            // If already switched, current is the effective rate calculation or just use logic?
-            // "use currentRatePct before, futureRatePct after"
-            // If switched, "current" IS the active high rate.
-            // Let's rely on data model:
-            // If today < effectiveChangeDate, we are in 'currentRate' zone.
-            // If effectiveChangeDate exists and is in future, we have a switch.
+                let rate = debt.interestRate || 0;
 
-            let activeRate1 = currentRate;
-            let activeRate2 = currentRate;
+                // Check if rate has switched by this month
+                if (effectiveChangeDate && monthDate >= effectiveChangeDate && debt.futureRates?.length > 0) {
+                    rate = debt.futureRates[0].rate;
+                } else if (effectiveChangeDate && effectiveChangeDate <= today && debt.futureRates?.length > 0) {
+                    // Already switched before projection period
+                    rate = debt.futureRates[0].rate;
+                }
 
-            // Check if switch happens within window and is in future
-            if (effectiveChangeDate && effectiveChangeDate > today && effectiveChangeDate <= endDate && debt.futureRates?.length > 0) {
-                activeRate2 = debt.futureRates[0].rate; // future
-            } else if (effectiveChangeDate && effectiveChangeDate <= today && debt.futureRates?.length > 0) {
-                // Already switched
-                activeRate1 = debt.futureRates[0].rate;
-                activeRate2 = debt.futureRates[0].rate;
+                const monthlyRate = (rate / 100) / 12;
+                const interest = balance * monthlyRate;
+                const principal = Math.min(monthlyPayment - interest, balance);
+
+                totalInterest += interest;
+                balance = Math.max(0, balance - principal);
+
+                if (balance <= 0) break;
             }
 
-            // Calculation
-            // If no switch in window or already switched: simple
-            if (activeRate1 === activeRate2) {
-                return (debt.currentBalance * (activeRate1 / 100) / 12) * months;
-            } else {
-                // Split
-                // Days until change
-                const diffTime = effectiveChangeDate - today;
-                const daysUntil = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                const daysTotal = months * 30; // Approx
-
-                const ratio1 = Math.min(daysUntil, daysTotal) / daysTotal;
-                const ratio2 = 1 - ratio1;
-
-                const monthly1 = (debt.currentBalance * (activeRate1 / 100) / 12);
-                const monthly2 = (debt.currentBalance * (activeRate2 / 100) / 12);
-
-                return (monthly1 * months * ratio1) + (monthly2 * months * ratio2);
-            }
+            return totalInterest;
         };
 
         total3Month += calculateProjectedInterest(3);

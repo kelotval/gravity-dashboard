@@ -33,18 +33,37 @@ export default function OverviewV2({
     debts,
     activeMonth,
     setActiveMonth,
-    availableMonths = []
+    availableMonths = [],
+    monthlyLedger = [],
+    incomeHistory = []
 }) {
     const [animate, setAnimate] = useState(false);
+    const [timeRange, setTimeRange] = useState('last6'); // 'last6' or 'ytd'
 
     useEffect(() => {
         setAnimate(true);
     }, []);
 
-    // Ensure we have some data for chart even if empty
-    const chartData = incomeExpenseData && incomeExpenseData.length > 0
-        ? incomeExpenseData
-        : [{ name: 'Current', Income: 0, Expenses: 0 }];
+    // Filter chart data based on selected time range
+    const getFilteredChartData = () => {
+        if (!incomeExpenseData || incomeExpenseData.length === 0) {
+            return [{ name: 'Current', Income: 0, Expenses: 0 }];
+        }
+
+        if (timeRange === 'ytd') {
+            // Filter for current year only
+            const currentYear = new Date().getFullYear();
+            return incomeExpenseData.filter(d => d.name && d.name.startsWith(String(currentYear)));
+        } else {
+            // Last 6 months (default)
+            return incomeExpenseData.slice(-6);
+        }
+    };
+
+    const chartData = getFilteredChartData();
+
+    // Get ledger data for the currently active month
+    const activeLedgerData = (monthlyLedger || []).find(l => l.monthKey === activeMonth) || {};
 
     // Format currency
     const fmt = (n) => n?.toLocaleString();
@@ -63,6 +82,37 @@ export default function OverviewV2({
                         <span className="text-xs px-2 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700">
                             Viewing: {activeMonth}
                         </span>
+                    </div>
+
+                    {/* DEBUG PANEL */}
+                    <div className="hidden">
+                        <h4 className="font-bold border-b border-yellow-500/30 mb-2 pb-1">DEBUG DATA ({activeMonth})</h4>
+                        {(() => {
+                            const thisMonthLedger = (monthlyLedger || []).find(l => l.monthKey === activeMonth);
+                            if (!thisMonthLedger) return <div>No ledger entry found for {activeMonth}</div>;
+
+                            const thisMonthTx = transactions.filter(t => (t.periodKey || t.date?.slice(0, 7)) === activeMonth);
+
+                            return (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <div>Income: ${thisMonthLedger.totalIncome?.toLocaleString()}</div>
+                                        <div>Expenses: ${thisMonthLedger.totalExpenses?.toLocaleString()}</div>
+                                        <div>Inflows: ${thisMonthLedger.totalInflows?.toLocaleString()}</div>
+                                    </div>
+                                    <div>
+                                        <div>Total Tx: {thisMonthTx.length}</div>
+                                        <div>Expense Tx Check: {thisMonthTx.filter(t => t.kind === 'expense').length}</div>
+                                        <div>Sample Tx:</div>
+                                        {thisMonthTx.slice(0, 2).map(t => (
+                                            <div key={t.id} className="text-gray-400 ml-2">
+                                                - {t.description?.slice(0, 15)}... (${t.amount}, {t.kind})
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })()}
                     </div>
                 </div>
                 <div className="flex gap-3">
@@ -185,7 +235,7 @@ export default function OverviewV2({
                             <div>
                                 <div className="flex justify-between text-sm mb-1">
                                     <span className="text-gray-400">Income</span>
-                                    <span className="text-emerald-400 font-bold">${fmt(incomeExpenseData[0]?.Income || 0)}</span>
+                                    <span className="text-emerald-400 font-bold">${fmt(activeLedgerData.plannedIncome || 0)}</span>
                                 </div>
                                 <div className="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden">
                                     <div className="h-full bg-emerald-500 w-full rounded-full" />
@@ -198,13 +248,13 @@ export default function OverviewV2({
                                         <span className="text-gray-400 block">Expenses</span>
                                         <span className="text-[10px] text-gray-600">Includes debt repayments</span>
                                     </div>
-                                    <span className="text-rose-400 font-bold">${fmt(incomeExpenseData[0]?.Expenses || 0)}</span>
+                                    <span className="text-rose-400 font-bold">${fmt(activeLedgerData.totalExpenses || 0)}</span>
                                 </div>
                                 <div className="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden">
                                     {/* Simple ratio calculation */}
                                     <div
                                         className="h-full bg-rose-500 rounded-full transition-all duration-1000"
-                                        style={{ width: `${Math.min(((incomeExpenseData[0]?.Expenses || 0) / (incomeExpenseData[0]?.Income || 1)) * 100, 100)}%` }}
+                                        style={{ width: `${Math.min(((activeLedgerData.totalExpenses || 0) / (activeLedgerData.plannedIncome || 1)) * 100, 100)}%` }}
                                     />
                                 </div>
                             </div>
@@ -270,9 +320,13 @@ export default function OverviewV2({
                             <h3 className="text-lg font-bold text-white mb-1">Financial Performance</h3>
                             <p className="text-sm text-gray-500">Income vs Expenses over time</p>
                         </div>
-                        <select className="bg-gray-950 border border-gray-800 text-gray-400 text-sm rounded-lg px-3 py-1 outline-none">
-                            <option>Last 6 Months</option>
-                            <option>Year to Date</option>
+                        <select
+                            value={timeRange}
+                            onChange={(e) => setTimeRange(e.target.value)}
+                            className="bg-gray-950 border border-gray-800 text-gray-400 text-sm rounded-lg px-3 py-1 outline-none hover:bg-gray-900 cursor-pointer transition-colors"
+                        >
+                            <option value="last6">Last 6 Months</option>
+                            <option value="ytd">Year to Date</option>
                         </select>
                     </div>
 
@@ -309,6 +363,7 @@ export default function OverviewV2({
                                     contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
                                     itemStyle={{ color: '#fff', fontSize: '12px' }}
                                     cursor={{ stroke: '#4b5563', strokeWidth: 1, strokeDasharray: '3 3' }}
+                                    formatter={(value) => `$${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                                 />
                                 <ReferenceLine y={0} stroke="#374151" strokeDasharray="3 3" opacity={0.5} />
                                 <Area

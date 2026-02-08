@@ -15,16 +15,21 @@ import SpendingIntelligence from "./components/SpendingIntelligence";
 import DebtRiskBanner from "./components/DebtRiskBanner";
 import InterestRiskPanel from "./components/InterestRiskPanel";
 import ActionPlanPanel from "./components/ActionPlanPanel";
-import ScenarioSimulator from "./components/ScenarioSimulator";
 import SubscriptionIntelligence from "./components/SubscriptionIntelligence";
 import WealthTrajectory from "./components/WealthTrajectory";
 import RelocationCommandCenter from "./components/RelocationCommandCenter";
 import OverviewV2 from "./components/OverviewV2";
 import { calculateEffectiveRateState, getDebtRiskBanners, calculateInterestProjections, getCurrentRate } from "./utils/PayoffEngine";
 import AmexCsvImport from "./components/AmexCsvImport";
-import RecurringExpensesModal from "./components/RecurringExpensesModal";
+import ManualExpensesManager from "./components/ManualExpensesManager";
 import { categorizeTransaction } from "./utils/categorize";
 import { calculateDetailedHealthScore } from "./utils/healthScore";
+import {
+    getPeriodKey,
+    expandManualExpensesForMonth,
+    getComputedTransactionsForMonth,
+    migrateRecurringExpenseData
+} from "./utils/transactionHelpers";
 import { DEFAULT_OFFERS, DEFAULT_RELOCATION_SETTINGS } from "./data/relocationOffers";
 import { getHouseholdState, upsertHouseholdState } from "./lib/householdApi";
 import SyncIndicator from "./components/SyncIndicator";
@@ -32,7 +37,9 @@ import HouseholdPinGate from "./components/HouseholdPinGate";
 import ResetDataModal from "./components/ResetDataModal";
 
 import { DEFAULT_STATE } from "./data";
-import { DollarSign, TrendingDown, PiggyBank, Wallet, Plus, RefreshCw, Layers, Calendar } from "lucide-react";
+import { DollarSign, TrendingDown, PiggyBank, Wallet, Plus, RefreshCw, Layers, Calendar, Filter } from "lucide-react";
+
+const HOUSEHOLD_KEY = "eric-rebecca"; // stable ID for your household
 
 // Extensive Categorization Rules (Australian Context)
 const DEFAULT_CATEGORY_RULES = [
@@ -274,10 +281,10 @@ const STORAGE_KEY_V1 = "er_finance_state_v1";
 
 function loadStored() {
     try {
-        // Try loading v2 first
         const v2Raw = localStorage.getItem(STORAGE_KEY_V2);
         if (v2Raw) {
             const data = JSON.parse(v2Raw);
+
             // Ensure all transactions have periodKey
             if (data.transactions) {
                 data.transactions = data.transactions.map(tx => ({
@@ -285,6 +292,25 @@ function loadStored() {
                     periodKey: tx.periodKey || tx.monthKey || (tx.date ? tx.date.substring(0, 7) : null)
                 }));
             }
+
+            // MIGRATION: Upgrade recurring expenses schema if needed
+            // Run migration every time to catch newly added expenses with old schema
+            if (data.recurringExpenses && data.recurringExpenses.length > 0) {
+                const needsMigration = data.recurringExpenses.some(exp =>
+                    !exp.frequency || !exp.hasOwnProperty('overrides')
+                );
+
+                if (needsMigration) {
+                    console.log("Migrating recurring expenses to v2 schema...");
+                    data.recurringExpenses = migrateRecurringExpenseData(data.recurringExpenses);
+                }
+            }
+
+            // CLEANUP: Deduplicate categories array
+            if (data.categories && Array.isArray(data.categories)) {
+                data.categories = [...new Set(data.categories)];
+            }
+
             return data;
         }
 
@@ -335,11 +361,31 @@ function loadStored() {
     }
 }
 
+// Save to localStorage: V2 format - FIXED: Added size protection
 function saveStored(data) {
     try {
-        localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(data));
+        const serialized = JSON.stringify(data);
+        const sizeKB = new Blob([serialized]).size / 1024;
+
+        // Warn when approaching 4MB (before 5MB limit)
+        if (sizeKB > 4096) {
+            console.warn(`⚠️ State size: ${sizeKB.toFixed(0)}KB approaching localStorage limit. Consider archiving old transactions.`);
+        }
+
+        // Analytics: Log size for monitoring
+        if (sizeKB > 1024) {
+            console.info(`📊 Storage size: ${sizeKB.toFixed(0)}KB with ${data.transactions?.length || 0} transactions`);
+        }
+
+        localStorage.setItem(STORAGE_KEY_V2, serialized);
     } catch (e) {
-        console.error("Failed to save state", e);
+        if (e.name === 'QuotaExceededError') {
+            console.error('💾 LocalStorage limit exceeded!', e);
+            alert('Storage limit reached! Please contact support or export your data.');
+            // Keep running with current state, just don't save
+        } else {
+            console.error("Failed to save state:", e);
+        }
     }
 }
 
@@ -399,6 +445,7 @@ export default function App() {
         "Gambling & Lottery",
         "Other",
     ]);
+    const [sourceFilter, setSourceFilter] = useState("all"); // 'all', 'amex', 'manual'
     const [relocation, setRelocation] = useState(stored?.relocation ?? {
         offers: DEFAULT_OFFERS,
         assumptions: DEFAULT_RELOCATION_SETTINGS,
@@ -495,7 +542,7 @@ export default function App() {
                 setSyncStatus('loading');
 
                 // Try to fetch remote state
-                const remoteState = await getHouseholdState(householdPin, householdPin);
+                const remoteState = await getHouseholdState(householdPin);
 
                 if (remoteState && Object.keys(remoteState).length > 0) {
                     // Returning household - load remote state
@@ -528,7 +575,10 @@ export default function App() {
                         recurringExpenses,
                         activePeriodKey
                     };
-                    await upsertHouseholdState(householdPin, householdPin, currentState, true);
+                    await upsertHouseholdState(
+                        householdPin,
+                        currentState
+                    );
                     setSyncStatus('synced');
                 }
 
@@ -572,7 +622,10 @@ export default function App() {
             saveTimeoutRef.current = setTimeout(async () => {
                 try {
                     setSyncStatus('saving');
-                    await upsertHouseholdState(householdPin, householdPin, payload, false);
+                    await upsertHouseholdState(
+                        householdPin,
+                        payload
+                    );
                     setSyncStatus('synced');
                 } catch (err) {
                     console.error('Failed to sync household state:', err);
@@ -627,6 +680,7 @@ export default function App() {
         // Always treat explicit categories first
         if (tx.category === "Transfers") return "transfer";
         if (tx.category === "Income" || tx.type === "income") return "income";
+        if (tx.category === "Debt" || tx.category === "Bills Payments") return "payment"; // FIXED: Treat debt repayments as payments
 
         // Payment keywords (paying the card)
         const paymentKeywords = [
@@ -636,11 +690,18 @@ export default function App() {
         ];
         if (paymentKeywords.some(k => desc.includes(k))) return "payment";
 
-        // IMPORTANT: Card purchases are usually negative
-        // Purchases: negative
-        // Credits/refunds: positive
-        if (amt < 0) return "expense";
-        if (amt > 0) return "refund";
+        // FIXED: Income keyword detection - prevents salary deposits from being classified as refunds
+        const incomeKeywords = [
+            "salary", "payroll", "wages", "income",
+            "deposit", "payment received", "transfer in", "eft credit"
+        ];
+        if (amt > 0 && incomeKeywords.some(k => desc.includes(k))) return "income";
+
+        // IMPORTANT: Amex statement convention (opposite of typical accounting)
+        // Purchases/Expenses: POSITIVE amounts
+        // Credits/Refunds/Payments: NEGATIVE amounts
+        if (amt > 0) return "expense";
+        if (amt < 0) return "refund";
 
         return "expense";
     }
@@ -651,70 +712,134 @@ export default function App() {
     // Reset Data Modal state
     const [isResetModalOpen, setIsResetModalOpen] = useState(false);
 
+    // Helper Functions for Transaction and Cashflow Calculations
+    const normalizeAmount = (tx) => parseAmount(tx.amount);
+    const isInflow = (tx) => tx.kind === "income";
+    const isOutflow = (tx) => tx.kind === "expense";
+
     // --- Ledger: Single Source of Truth (Core Engine) ---
     const monthlyLedger = useMemo(() => {
-        // 1. Gather all relevant month keys
-        // 1. Gather all relevant period keys
+        // Quick map of transactions by period for performance
         const periods = new Set();
-        if (activePeriodKey) periods.add(activePeriodKey);
+        // Add periods from income history (may use 'periodKey' OR 'date' field)
+        incomeHistory.forEach(h => {
+            if (h.periodKey) periods.add(h.periodKey);
+            if (h.date) periods.add(h.date);
+        });
         transactions.forEach(tx => {
             const p = getPeriodKey(tx);
             if (p) periods.add(p);
         });
-        incomeHistory.forEach(h => {
-            if (h.date) periods.add(h.date);
+        // Add periods covered by recurring expenses
+        recurringExpenses.forEach(expense => {
+            if (expense.active !== false) {
+                const start = expense.startMonth || expense.startPeriodKey;
+                const end = expense.endMonth || expense.endPeriodKey;
+                if (start) periods.add(start);
+                if (end) periods.add(end);
+            }
         });
 
-        // 2. Build Ledger Rows
         const ledger = Array.from(periods).filter(Boolean).map(periodKey => {
-            // A. Planned Income
-            const incObj = getIncomeForMonth(periodKey);
-            const plannedIncome = (incObj.salaryEric || 0) + (incObj.salaryRebecca || 0) + (incObj.other || 0);
+            // Get computed transactions for this period (imported + manual)
+            const periodTransactions = getComputedTransactionsForMonth(
+                periodKey,
+                transactions,
+                recurringExpenses
+            ).map(tx => ({
+                ...tx,
+                kind: tx.kind || inferTransactionKind(tx)
+            }));
 
-            // B. Recurring Spend (Virtual) - only active items within period range
+            // Find income for this specific period using milestone behavior
+            // Income history entries represent "from this month onwards" until the next change
+            // Find the most recent income entry on or before this period
+            const relevantIncomeEntries = incomeHistory
+                .filter(h => {
+                    const entryDate = h.periodKey || h.date;
+                    return entryDate && entryDate <= periodKey;
+                })
+                .sort((a, b) => {
+                    const dateA = a.periodKey || a.date;
+                    const dateB = b.periodKey || b.date;
+                    return dateB.localeCompare(dateA); // Descending order
+                });
+            const incomeEntry = relevantIncomeEntries[0]; // Most recent entry
+
+            // Calculate total from salary components (incomeEntry doesn't have a 'total' field)
+            const totalIncome = incomeEntry
+                ? Number(incomeEntry.salaryEric || 0) + Number(incomeEntry.salaryRebecca || 0) + Number(incomeEntry.other || 0)
+                : Number(income.salary || 0);
+
+            // Calculate recurring expenses manually (already included in periodTransactions)
             const recurringSpend = recurringExpenses
                 .filter(item => {
-                    // Must be active
                     if (item.active === false) return false;
-                    // Check period range if specified
-                    if (item.startPeriodKey && periodKey < item.startPeriodKey) return false;
-                    if (item.endPeriodKey && periodKey > item.endPeriodKey) return false;
+                    const startMonth = item.startMonth || item.startPeriodKey;
+                    const endMonth = item.endMonth || item.endPeriodKey;
+                    if (startMonth && periodKey < startMonth) return false;
+                    if (endMonth && periodKey > endMonth) return false;
+                    if (item.overrides?.[periodKey]?.disabled) return false;
                     return true;
                 })
-                .reduce((sum, item) => sum + Math.abs(Number(item.amount || 0)), 0);
+                .reduce((sum, item) => {
+                    const override = item.overrides?.[periodKey];
+                    const amount = override?.amount ?? item.amount;
+                    return sum + parseAmount(amount);
+                }, 0);
 
-            // C. AMEX / Real Transactions
-            const txs = transactions.filter(tx => getPeriodKey(tx) === periodKey);
+            // Calculate totals from all transactions
+            // Calculate totals from all transactions
+            const debugExpenses = periodTransactions.filter(tx => isOutflow(tx));
+            const expenseSum = debugExpenses.reduce((sum, tx) => sum + normalizeAmount(tx), 0);
 
-            const amexTotals = txs.reduce((acc, txRaw) => {
-                const kind = inferTransactionKind(txRaw);
-                const amt = parseAmount(txRaw.amount);
-                const absAmt = Math.abs(amt);
+            if (periodKey === '2025-12' || periodKey === '2026-01') {
+                console.log(`[DEBUG ${periodKey}] Ledger Calc:`, {
+                    totalTx: periodTransactions.length,
+                    expenseTxCount: debugExpenses.length,
+                    sampleExpense: debugExpenses[0],
+                    expenseSum,
+                    calcTotal: Math.abs(expenseSum)
+                });
+            }
 
-                if (kind === "expense") acc.gross += absAmt;
-                if (kind === "refund") acc.refunds += absAmt;
-                if (kind === "payment") acc.payments += absAmt;
-                if (kind === "income") acc.incomeActual += absAmt;
-                if (kind === "transfer") acc.transfers += absAmt;
+            const totalExpenses = Math.abs(expenseSum);
 
-                return acc;
-            }, { gross: 0, refunds: 0, payments: 0, transfers: 0, incomeActual: 0 });
+            const totalInflows = periodTransactions
+                .filter(tx => isInflow(tx))
+                .reduce((sum, tx) => sum + Math.abs(normalizeAmount(tx)), 0);
 
-            const amexNetSpend = amexTotals.gross - amexTotals.refunds;
-            const totalExpenses = amexNetSpend + recurringSpend;
+            const netSavings = totalIncome - totalExpenses;
 
             return {
                 monthKey: periodKey,
-                plannedIncome,
-                recurringSpend,
-                amexGrossSpend: amexTotals.gross,
-                amexRefunds: amexTotals.refunds,
-                amexNetSpend,
+                totalIncome,
+                plannedIncome: totalIncome,  // Alias for compatibility
                 totalExpenses,
-                paymentsToCard: amexTotals.payments,
-                transfers: amexTotals.transfers,
-                amexIncome: amexTotals.incomeActual,
-                netDelta: plannedIncome - totalExpenses
+                recurringSpend,
+                netSavings,
+                savingsRate: totalIncome > 0 ? (netSavings / totalIncome) * 100 : 0,
+                transactionCount: periodTransactions.length,
+                // Additional fields for compatibility
+                amexGrossSpend: periodTransactions
+                    .filter(tx => (tx.source === "amex" || tx.source === "amex_csv") && tx.kind === "expense")
+                    .reduce((sum, tx) => sum + normalizeAmount(tx), 0),
+                amexRefunds: periodTransactions
+                    .filter(tx => (tx.source === "amex" || tx.source === "amex_csv") && tx.kind === "refund")
+                    .reduce((sum, tx) => sum + normalizeAmount(tx), 0),
+                amexNetSpend: periodTransactions
+                    .filter(tx => (tx.source === "amex" || tx.source === "amex_csv") && (tx.kind === "expense" || tx.kind === "payment"))
+                    .reduce((sum, tx) => sum + normalizeAmount(tx), 0),
+                paymentsToCard: periodTransactions
+                    .filter(tx => tx.kind === "payment")
+                    .reduce((sum, tx) => sum + normalizeAmount(tx), 0),
+                transfers: periodTransactions
+                    .filter(tx => tx.kind === "transfer")
+                    .reduce((sum, tx) => sum + normalizeAmount(tx), 0),
+                amexIncome: periodTransactions
+                    .filter(tx => tx.kind === "income")
+                    .reduce((sum, tx) => sum + normalizeAmount(tx), 0),
+                netDelta: netSavings
             };
         });
 
@@ -723,51 +848,19 @@ export default function App() {
 
     // --- Derived Transaction Sets for Active Month ---
     const activeTransactionsAll = useMemo(() => {
-        // 1. Get real transactions for this period
-        const realTx = transactions.filter(tx => {
-            const txPeriod = getPeriodKey(tx);
-            return txPeriod === activePeriodKey;
-        });
+        // Use unified helper to get computed transactions (imported + manual)
+        const computed = getComputedTransactionsForMonth(
+            activePeriodKey,
+            transactions,
+            recurringExpenses
+        );
 
-        // 2. Generate virtual transactions from recurring list
-        // Formatted to look like real transactions with negative amounts for expenses
-        // Only include active items within period range
-        const virtualTx = recurringExpenses
-            .filter(item => {
-                // Must be active (default true if not specified)
-                if (item.active === false) return false;
-                // Check period range if specified
-                if (item.startPeriodKey && activePeriodKey < item.startPeriodKey) return false;
-                if (item.endPeriodKey && activePeriodKey > item.endPeriodKey) return false;
-                return true;
-            })
-            .map(item => ({
-                id: `virtual-${activePeriodKey}-${item.id}`,
-                date: `${activePeriodKey}-${String(item.day).padStart(2, '0')}`,
-                periodKey: activePeriodKey,
-                description: item.description,
-                item: item.description,
-                merchant: item.description,
-                amount: -Math.abs(parseAmount(item.amount)),  // Force negative for expenses
-                category: item.category || "Other",  // Default to "Other" if missing
-                type: "expense",
-                kind: "expense",  // Explicitly set to prevent inference
-                isVirtual: true,
-            }));
-
-        return [...realTx, ...virtualTx]
-            .map(tx => ({
-                ...tx,
-                kind: tx.kind || inferTransactionKind(tx)  // Use explicit kind or infer
-            }))
-            .sort((a, b) => b.date.localeCompare(a.date));
+        // Infer kind for transactions that don't have it explicitly set
+        return computed.map(tx => ({
+            ...tx,
+            kind: tx.kind || inferTransactionKind(tx)
+        })).sort((a, b) => b.date.localeCompare(a.date));
     }, [transactions, activePeriodKey, recurringExpenses]);
-
-    // Helper Functions for Cashflow Calculations
-    const normalizeAmount = (tx) => parseAmount(tx.amount);
-
-    const isInflow = (tx) => tx.kind === "income";
-    const isOutflow = (tx) => tx.kind === "expense";
 
     const activeTransactionsSpending = useMemo(() => {
         return activeTransactionsAll.filter(tx => {
@@ -886,10 +979,36 @@ export default function App() {
 
         const query = searchQuery.toLowerCase().trim();
 
-        // If searching, we search ALL transactions (global search)
-        // unless the user explicitly wants to filter within the active month?
-        // For now, global search is more useful for "find that thing I bought last year"
-        return transactions.filter(tx => {
+        let baseList = activeTransactionsAll;
+
+        // Source Filter
+        if (sourceFilter !== 'all') {
+            baseList = baseList.filter(tx => {
+                if (sourceFilter === "amex") return tx.source === "amex" || tx.source === "amex_csv" || !tx.source;
+                if (sourceFilter === "manual") return tx.source === "manual" || tx.isRecurring || tx.isVirtual;
+                return true;
+            });
+        }
+
+        // If searching, we search ALL transactions (global search) but respect source filter
+        // If query is empty, allow source filter on active month
+        if (query) {
+            // For global search, we should ideally search 'transactions' not 'activeTransactionsAll'
+            // But let's respect the user's flow. If they search, they might want to see global results.
+            // Let's use 'transactions' as base if searching
+            baseList = transactions;
+            if (sourceFilter !== 'all') {
+                baseList = baseList.filter(tx => {
+                    if (sourceFilter === "amex") return tx.source === "amex" || tx.source === "amex_csv" || !tx.source;
+                    if (sourceFilter === "manual") return tx.source === "manual" || tx.isRecurring || tx.isVirtual;
+                    return true;
+                });
+            }
+        }
+
+        if (!query) return baseList;
+
+        return baseList.filter(tx => {
             // Category filter: cat:groceries
             if (query.startsWith("cat:")) {
                 const catSearch = query.substring(4).trim();
@@ -951,51 +1070,73 @@ export default function App() {
     }, [debts]);
 
     // ---------------------------------------------
-    // Wealth Trajectory Engine
-    // ---------------------------------------------
+    // --- Wealth Trajectory (Net Worth Over Time) ---
     const wealthMetrics = useMemo(() => {
-        // 1. Calculate Monthly Interest Burn
-        const monthlyInterestCost = debts.reduce((acc, debt) => {
-            const rateState = debtRateStateById[debt.id];
-            const rate = parseFloat(rateState.effectiveRatePct);
-            return acc + (debt.currentBalance * (rate / 100)) / 12;
-        }, 0);
+        try {
+            const totalDebt = debts.reduce((sum, d) => sum + (d.currentBalance || 0), 0);
+            const totalAssets = Number(profile.assets || 0); const baseNetWorth = totalAssets - totalDebt;
 
-        // 2. Calculate Principal Velocity (Repayment - Interest)
-        // Note: totalMonthlyDebt is sum of ALL payments
-        const monthlyPrincipalPaid = Math.max(totalMonthlyDebt - monthlyInterestCost, 0);
+            // FIXED: Calculate interest and principal per-debt to handle mixed rates correctly
+            const { monthlyInterestCost, monthlyPrincipalPaid } = debts.reduce((acc, debt) => {
+                const rateState = debtRateStateById[debt.id];
+                const rate = parseFloat(rateState?.effectiveRatePct || debt.interestRate || 0);
+                const balance = debt.currentBalance || 0;
+                const payment = debt.monthlyRepayment || 0;
 
-        // 3. Total Net Worth Velocity (Net Savings + Principal Reduction)
-        // Net Savings = Income - Expenses ( Expenses includes the FULL debt payment )
-        // So: Change in Cash = Net Savings
-        // Change in Debt = -PrincipalPaid
-        // Change in NW = Change in Cash + Change in Debt (where Debt is negative liability)
-        //              = Net Savings + PrincipalPaid
-        // This is correct: Expenses (Cash Out) - Principal (Liability Down) = Interest (Expense)
-        // Alternatively: NW Change = Income - (Expenses - Principal) - Interest === Income - Interest - (Other Expenses)
-        // Simplified: NW Change = Net Savings + PrincipalPaid
-        const monthlyVelocity = netSavings + monthlyPrincipalPaid;
+                const interest = (balance * (rate / 100)) / 12;
+                const principal = Math.max(payment - interest, 0);
 
-        // 4. Projections
-        const projected6Mo = netWorth + (monthlyVelocity * 6);
-        const projected1Year = netWorth + (monthlyVelocity * 12);
+                return {
+                    monthlyInterestCost: acc.monthlyInterestCost + interest,
+                    monthlyPrincipalPaid: acc.monthlyPrincipalPaid + principal
+                };
+            }, { monthlyInterestCost: 0, monthlyPrincipalPaid: 0 });
 
-        // 5. Crossover Date (if negative)
-        let monthsToPositive = null;
-        if (netWorth < 0 && monthlyVelocity > 0) {
-            monthsToPositive = Math.abs(netWorth / monthlyVelocity);
+            const totalMonthlyDebt = debts.reduce((sum, d) => sum + (d.monthlyRepayment || 0), 0);
+
+            // Net Worth Velocity: monthly savings + principal paydown - interest cost
+            const netWorthVelocity = netSavings + monthlyPrincipalPaid;
+            // So: Change in Cash = Net Savings
+            // Change in Debt = -PrincipalPaid
+            // Change in NW = Change in Cash + Change in Debt (where Debt is negative liability)
+            //              = Net Savings + PrincipalPaid
+            // This is correct: Expenses (Cash Out) - Principal (Liability Down) = Interest (Expense)
+            // Alternatively: NW Change = Income - (Expenses - Principal) - Interest === Income - Interest - (Other Expenses)
+            // Simplified: NW Change = Net Savings + PrincipalPaid
+            const monthlyVelocity = netSavings + monthlyPrincipalPaid;
+
+            // 4. Projections
+            const projected6Mo = netWorth + (monthlyVelocity * 6);
+            const projected1Year = netWorth + (monthlyVelocity * 12);
+
+            // 5. Crossover Date (if negative)
+            let monthsToPositive = null;
+            if (netWorth < 0 && monthlyVelocity > 0) {
+                monthsToPositive = Math.abs(netWorth / monthlyVelocity);
+            }
+
+            return {
+                netWorth,
+                monthlyVelocity,
+                monthlyPrincipalPaid,
+                monthlyInterestCost,
+                projected6Mo,
+                projected1Year,
+                monthsToPositive
+            };
+        } catch (error) {
+            console.error("Error calculating wealth metrics:", error);
+            return {
+                netWorth: 0,
+                monthlyVelocity: 0,
+                monthlyPrincipalPaid: 0,
+                monthlyInterestCost: 0,
+                projected6Mo: 0,
+                projected1Year: 0,
+                monthsToPositive: null
+            };
         }
-
-        return {
-            netWorth,
-            monthlyVelocity,
-            monthlyPrincipalPaid,
-            monthlyInterestCost,
-            projected6Mo,
-            projected1Year,
-            monthsToPositive
-        };
-    }, [netWorth, netSavings, debts, totalMonthlyDebt, debtRateStateById]);
+    }, [netWorth, netSavings, debts, debtRateStateById, profile.assets]);
 
     // 2. Event Handlers
     const handleSaveTransaction = (txData) => {
@@ -1070,13 +1211,15 @@ export default function App() {
         setIsModalOpen(true);
     };
 
-    // AMEX CSV Import
+    // AMEX CSV Import - FIXED: Better duplicate detection
     const makeTxnKey = (t) => {
         if (t.reference) return `ref:${String(t.reference).trim()}`;
         const date = String(t.date || "").trim();
+        const time = t.time || "";  // Include time if available
         const amt = Number(t.amount || 0).toFixed(2);
         const desc = String(t.description || t.merchant || "").trim().toLowerCase();
-        return `${date}|${amt}|${desc}`;
+        const card = t.cardMember || "";  // Include card member if available
+        return `${date}|${time}|${amt}|${desc}|${card}`;
     };
 
     const handleAddCategory = (newCat) => {
@@ -1351,6 +1494,8 @@ export default function App() {
                     activeMonth={activePeriodKey}
                     setActiveMonth={setActivePeriodKey}
                     availableMonths={[...new Set(transactions.map(t => getPeriodKey(t)))].filter(Boolean).sort().reverse()} // Pass unique periods
+                    monthlyLedger={monthlyLedger}
+                    incomeHistory={incomeHistory}
                 />
             );
         }
@@ -1392,25 +1537,7 @@ export default function App() {
             );
         }
 
-        if (currentTab === "scenarios") {
-            return (
-                <div>
-                    <div className="mb-6">
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                            Scenario Simulator
-                        </h2>
-                        <p className="text-gray-500 dark:text-gray-400">
-                            Test what-if scenarios and see instant impact on your financial metrics
-                        </p>
-                    </div>
-                    <ScenarioSimulator
-                        income={income}
-                        transactions={transactions}
-                        debts={debts}
-                    />
-                </div>
-            );
-        }
+
 
         if (currentTab === "subscriptions") {
             return (
@@ -1466,6 +1593,22 @@ export default function App() {
                                 </select>
                                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
                                     <Layers className="w-4 h-4" />
+                                </div>
+                            </div>
+
+                            {/* Source Filter Dropdown */}
+                            <div className="relative mr-2">
+                                <select
+                                    value={sourceFilter}
+                                    onChange={(e) => setSourceFilter(e.target.value)}
+                                    className="appearance-none bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white pl-3 pr-8 py-2 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-colors"
+                                >
+                                    <option value="all">All Sources</option>
+                                    <option value="amex">Amex Only</option>
+                                    <option value="manual">Manual Only</option>
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                                    <Filter className="w-4 h-4" />
                                 </div>
                             </div>
                             <button
@@ -1529,22 +1672,24 @@ export default function App() {
                     </div>
 
                     {/* Search Results Info */}
-                    {searchQuery && (
-                        <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                            <p className="text-sm text-gray-700 dark:text-gray-300">
-                                {filteredTransactions.length === 0 ? (
-                                    <span className="font-medium">No transactions found matching "{searchQuery}"</span>
-                                ) : (
-                                    <>
-                                        Found <span className="font-bold text-blue-600 dark:text-blue-400">{filteredTransactions.length}</span> transaction{filteredTransactions.length !== 1 ? 's' : ''} matching "{searchQuery}"
-                                        {filteredTransactions.length !== transactions.length && (
-                                            <span className="text-gray-500 dark:text-gray-400"> (of {transactions.length} total)</span>
-                                        )}
-                                    </>
-                                )}
-                            </p>
-                        </div>
-                    )}
+                    {
+                        searchQuery && (
+                            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                <p className="text-sm text-gray-700 dark:text-gray-300">
+                                    {filteredTransactions.length === 0 ? (
+                                        <span className="font-medium">No transactions found matching "{searchQuery}"</span>
+                                    ) : (
+                                        <>
+                                            Found <span className="font-bold text-blue-600 dark:text-blue-400">{filteredTransactions.length}</span> transaction{filteredTransactions.length !== 1 ? 's' : ''} matching "{searchQuery}"
+                                            {filteredTransactions.length !== transactions.length && (
+                                                <span className="text-gray-500 dark:text-gray-400"> (of {transactions.length} total)</span>
+                                            )}
+                                        </>
+                                    )}
+                                </p>
+                            </div>
+                        )
+                    }
 
                     {/* Accounting Sanity Check (moved from footer) */}
                     <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded text-xs dark:bg-gray-800 dark:border-gray-700">
@@ -1586,7 +1731,7 @@ export default function App() {
                         groupByCategory={true}
                         hideSearch={true}
                     />
-                </div>
+                </div >
             );
         }
 
@@ -1938,11 +2083,17 @@ export default function App() {
                 initialData={editingTransaction}
                 availableCategories={categories}
             />
-            <RecurringExpensesModal
+            <ManualExpensesManager
                 isOpen={isRecurringModalOpen}
                 onClose={() => setIsRecurringModalOpen(false)}
-                recurringExpenses={recurringExpenses}
+                manualExpenses={recurringExpenses}
                 onUpdateExpenses={setRecurringExpenses}
+                categories={categories}
+                onCreateCategory={(newCategory) => {
+                    if (!categories.includes(newCategory)) {
+                        setCategories(prev => [...prev, newCategory]);
+                    }
+                }}
             />
             <ResetDataModal
                 isOpen={isResetModalOpen}

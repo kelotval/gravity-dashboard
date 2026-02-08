@@ -17,30 +17,38 @@ import {
  * - Appears On Your Statement As OR Description
  */
 
+// --- Helper Functions ---
 function tryParseDate(value) {
   const s = String(value || "").trim();
   if (!s) return null;
 
-  // ISO
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-
-  // DD/MM/YYYY (AU default)
-  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (m) {
-    const dd = String(Number(m[1])).padStart(2, "0");
-    const mm = String(Number(m[2])).padStart(2, "0");
-    const yyyy = String(Number(m[3]));
-    return `${yyyy}-${mm}-${dd}`;
+  // ISO format YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    return s;
   }
 
-  // fallback
-  const t = Date.parse(s);
-  if (!Number.isNaN(t)) {
-    const d = new Date(t);
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    return `${yyyy}-${mm}-${dd}`;
+  // Parse DD/MM/YYYY or MM/DD/YYYY format
+  const parts = s.split(/[-\/]/);
+  if (parts.length === 3) {
+    const [a, b, c] = parts.map(Number);
+    let yyyy, mm, dd;
+
+    if (a > 1000) {
+      // YYYY-MM-DD or YYYY/MM/DD
+      [yyyy, mm, dd] = [a, b, c];
+    } else if (c > 1000) {
+      // DD/MM/YYYY or MM/DD/YYYY - assume DD/MM for Australian context
+      dd = a;
+      mm = b;
+      yyyy = c;
+    } else {
+      return null;
+    }
+
+    // Validate ranges
+    if (yyyy >= 2000 && yyyy <= 2100 && mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31) {
+      return `${yyyy}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+    }
   }
 
   return null;
@@ -66,27 +74,22 @@ function isIgnoredPaymentLine(description) {
 
 /**
  * AMEX Normalization:
- * Dashboard expects:
- * - expenses as NEGATIVE
- * - refunds as POSITIVE
- *
- * AMEX export appears:
- * - purchases as POSITIVE
- * - refunds as NEGATIVE
+ * Keep the AMEX export convention as-is (positive = expenses, negative = refunds/payments)
+ * The app's inferTransactionKind function handles this convention correctly
  */
 function normalizeAmexAmount(rawAmount, description) {
   if (isIgnoredPaymentLine(description)) {
     return { skip: true, normalized: 0, kind: "payment" };
   }
 
-  // Purchases positive -> expense negative
+  // Purchases (positive) → keep positive, mark as expense
   if (rawAmount > 0) {
-    return { skip: false, normalized: -Math.abs(rawAmount), kind: "expense" };
+    return { skip: false, normalized: rawAmount, kind: "expense" };
   }
 
-  // Refunds negative -> refund positive
+  // Refunds/Payments (negative) → keep negative, mark as refund
   if (rawAmount < 0) {
-    return { skip: false, normalized: Math.abs(rawAmount), kind: "refund" };
+    return { skip: false, normalized: rawAmount, kind: "refund" };
   }
 
   return { skip: false, normalized: 0, kind: "expense" };
@@ -151,8 +154,8 @@ export default function AmexCsvImport({ onImport }) {
         const descCol = fields.includes("Appears On Your Statement As")
           ? "Appears On Your Statement As"
           : fields.includes("Description")
-          ? "Description"
-          : null;
+            ? "Description"
+            : null;
 
         if (!descCol) {
           setError(
@@ -287,11 +290,10 @@ export default function AmexCsvImport({ onImport }) {
         {!parsedData && (
           <div
             onClick={() => selectedPeriod && fileInputRef.current?.click()}
-            className={`border-2 border-dashed ${
-              selectedPeriod
-                ? "border-gray-200 dark:border-gray-600 cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                : "border-gray-100 dark:border-gray-700 cursor-not-allowed opacity-50"
-            } rounded-xl p-6 text-center transition-all group`}
+            className={`border-2 border-dashed ${selectedPeriod
+              ? "border-gray-200 dark:border-gray-600 cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+              : "border-gray-100 dark:border-gray-700 cursor-not-allowed opacity-50"
+              } rounded-xl p-6 text-center transition-all group`}
           >
             <input
               ref={fileInputRef}

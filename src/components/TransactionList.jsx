@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import clsx from "clsx";
-import { ArrowUpRight, ArrowDownRight, Coffee, Home, Zap, Heart, Smartphone, Scissors, Monitor, Trash2, Pencil, CreditCard, Search, X, ShoppingBasket, Tag, Fuel, Utensils } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Coffee, Home, Zap, Heart, Smartphone, Scissors, Monitor, Trash2, Pencil, CreditCard, Search, X, ShoppingBasket, Tag, Fuel, Utensils, Edit3, Filter } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Helper to deterministically pick a color for a string
@@ -50,11 +50,23 @@ const getCategoryIcon = (category) => {
 
 export default function TransactionList({ transactions, onDelete, onEdit, groupByCategory = false, title = "Recent Transactions", hideSearch = false, headerAction = null }) {
     const [searchTerm, setSearchTerm] = useState("");
+    const [sourceFilter, setSourceFilter] = useState("all"); // all, amex, manual
 
-    const filteredTransactions = transactions.filter(tx =>
-        tx.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        tx.category.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredTransactions = transactions.filter(tx => {
+        // Search filter
+        const matchesSearch = tx.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            tx.category.toLowerCase().includes(searchTerm.toLowerCase());
+
+        // Source filter
+        let matchesSource = true;
+        if (sourceFilter === "amex") {
+            matchesSource = tx.source === "amex" || tx.source === "amex_csv" || !tx.source;
+        } else if (sourceFilter === "manual") {
+            matchesSource = tx.source === "manual" || tx.isRecurring || tx.isVirtual;
+        }
+
+        return matchesSearch && matchesSource;
+    });
 
     const clearSearch = () => setSearchTerm("");
 
@@ -89,10 +101,12 @@ export default function TransactionList({ transactions, onDelete, onEdit, groupB
             return acc;
         }, {});
 
-        // Sort: Uncategorized last, then alphabetical
-        // Sort: By item count (Ascending), then Alphabetical
-        // Goal: "Smallest amount of items at the beginning"
+        // Sort: Uncategorized always last, others by count (ascending), then alphabetical
         const sortedEntries = Object.entries(grouped).sort(([catA, txsA], [catB, txsB]) => {
+            // Special case: Always put "Uncategorized" last
+            if (catA === "Uncategorized") return 1;
+            if (catB === "Uncategorized") return -1;
+
             // Primary Sort: Count (Ascending)
             const countDiff = txsA.length - txsB.length;
             if (countDiff !== 0) return countDiff;
@@ -157,7 +171,12 @@ export default function TransactionList({ transactions, onDelete, onEdit, groupB
                                                         <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(tx.date || Date.now()).toLocaleDateString()}</p>
                                                     </div>
                                                     <div className="flex items-center gap-2">
-                                                        {tx.source === 'amex_csv' && (
+                                                        {(tx.source === "manual" || tx.isRecurring) && (
+                                                            <div title="Manual Entry" className="mr-1 px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded text-xs font-medium">
+                                                                MANUAL
+                                                            </div>
+                                                        )}
+                                                        {(tx.source === "amex" || tx.source === "amex_csv" || (!tx.source && !tx.isRecurring)) && (
                                                             <div title="Imported from AMEX" className="p-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">
                                                                 <CreditCard className="w-3 h-3" />
                                                             </div>
@@ -191,40 +210,62 @@ export default function TransactionList({ transactions, onDelete, onEdit, groupB
 
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden dark:bg-gray-800 dark:border-gray-700 h-full flex flex-col">
-            <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex-1 flex justify-between items-center sm:block">
-                    <div className="flex justify-between items-center w-full">
-                        <div>
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">{title}</h3>
-                            <span className="text-sm text-gray-500 dark:text-gray-400">{filteredTransactions.length} items</span>
+            <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex-1 flex justify-between items-center sm:block">
+                        <div className="flex justify-between items-center w-full">
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{title}</h3>
+                                <span className="text-sm text-gray-500 dark:text-gray-400">{filteredTransactions.length} items</span>
+                            </div>
+                            {headerAction && <div className="ml-4">{headerAction}</div>}
                         </div>
-                        {headerAction && <div className="ml-4">{headerAction}</div>}
                     </div>
                 </div>
 
-                {/* Embedded Search for List View */}
-                {!hideSearch && (
-                    <div className="relative w-full sm:w-64">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Search className="h-4 w-4 text-gray-400" />
+                {/* Filters Row */}
+                <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+
+                    {/* Search */}
+                    {!hideSearch && (
+                        <div className="relative flex-1 sm:flex-initial w-full sm:w-64">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <Search className="h-4 w-4 text-gray-400" />
+                            </div>
+                            <input
+                                type="text"
+                                className="block w-full pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all dark:bg-gray-900 dark:border-gray-600 dark:text-white"
+                                placeholder="Search..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                            {searchTerm && (
+                                <button
+                                    onClick={clearSearch}
+                                    className="absolute inset-y-0 right-0 pr-2 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            )}
                         </div>
-                        <input
-                            type="text"
-                            className="block w-full pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all dark:bg-gray-900 dark:border-gray-600 dark:text-white"
-                            placeholder="Search..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                        {searchTerm && (
-                            <button
-                                onClick={clearSearch}
-                                className="absolute inset-y-0 right-0 pr-2 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                            >
-                                <X className="h-4 w-4" />
-                            </button>
-                        )}
+                    )}
+
+                    {/* Source Filter */}
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Filter className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <select
+                            value={sourceFilter}
+                            onChange={(e) => setSourceFilter(e.target.value)}
+                            className="pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all dark:bg-gray-900 dark:border-gray-600 dark:text-white appearance-none"
+                        >
+                            <option value="all">All Sources</option>
+                            <option value="amex">Amex Only</option>
+                            <option value="manual">Manual Only</option>
+                        </select>
                     </div>
-                )}
+                </div>
             </div>
 
             <motion.div layout className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -257,9 +298,18 @@ export default function TransactionList({ transactions, onDelete, onEdit, groupB
                                 <div className="flex items-center gap-3">
                                     <span className="font-semibold text-gray-900 dark:text-white">${tx.amount.toLocaleString()}</span>
                                     <div className="flex items-center gap-1">
-                                        {tx.source === 'amex_csv' && (
+                                        {(tx.source === "manual" || tx.isRecurring) ? (
+                                            <div title="Manual Entry" className="mr-2 flex items-center gap-1">
+                                                <div className="p-1 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded">
+                                                    <Edit3 className="w-4 h-4" />
+                                                </div>
+                                                <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs font-medium rounded">
+                                                    MANUAL
+                                                </span>
+                                            </div>
+                                        ) : (tx.source === "amex" || tx.source === "amex_csv" || !tx.source) && (
                                             <div title="Imported from AMEX" className="mr-2 p-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">
-                                                <CreditCard className="w-3 h-3" />
+                                                <CreditCard className="w-4 h-4" />
                                             </div>
                                         )}
                                         {onEdit && (
