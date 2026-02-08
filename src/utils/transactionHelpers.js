@@ -99,20 +99,57 @@ export function expandManualExpensesForMonth(monthKey, manualExpenses) {
  * @returns {Array} Merged and sorted transaction list
  */
 export function getComputedTransactionsForMonth(monthKey, importedTransactions, manualExpenses) {
-    // Filter imported transactions for this month
-    const imported = importedTransactions
+    // Filter imported transactions (including historical manual one-offs) for this month
+    const realTransactions = importedTransactions
         .filter(tx => getPeriodKey(tx) === monthKey)
         .map(tx => ({
             ...tx,
-            source: tx.source || "amex",  // Default imported to 'amex'
+            source: tx.source || "amex",
             isVirtual: false
         }));
 
     // Expand manual expenses for this month
-    const manual = expandManualExpensesForMonth(monthKey, manualExpenses);
+    const virtualCandidates = expandManualExpensesForMonth(monthKey, manualExpenses);
 
-    // Merge and sort by date (newest first)
-    return [...imported, ...manual]
+    // Deduplication Logic:
+    // If a "real" transaction already exists that matches a "virtual" one, 
+    // we assume the user manually entered it or imported it, so we skip the virtual one.
+    const dedupedVirtual = virtualCandidates.filter(virtual => {
+        const isDuplicate = realTransactions.some(real => {
+            // Match 1: Extract amounts (handle sign differences)
+            const realAmt = Math.abs(parseAmount(real.amount));
+            const virtAmt = Math.abs(parseAmount(virtual.amount));
+
+            // Match 2: Descriptions (fuzzy match)
+            const realDesc = (real.description || real.item || "").toLowerCase().trim();
+            const virtDesc = (virtual.description || "").toLowerCase().trim();
+
+            // Strict amount match (cents matter for duplicates)
+            const amountMatch = Math.abs(realAmt - virtAmt) < 0.01;
+
+            // Description match
+            const descMatch = realDesc === virtDesc || realDesc.includes(virtDesc) || virtDesc.includes(realDesc);
+
+            // Category match (as a strong fallback if amount matches exactly)
+            const realCat = (real.category || "").toLowerCase().trim();
+            const virtCat = (virtual.category || "").toLowerCase().trim();
+            const categoryMatch = realCat === virtCat;
+
+            // Strict checking: Amount match + (Description match OR Category match)
+            // But if Amount > 100, assume it's a duplicate if amounts match perfectly (highly unlikely to be coincidence)
+            if (amountMatch && realAmt > 100) {
+                return true;
+            }
+
+            return amountMatch && (descMatch || categoryMatch);
+        });
+
+        // If it's a duplicate, we skip adding this virtual transaction
+        return !isDuplicate;
+    });
+
+    // Merge and sort
+    return [...realTransactions, ...dedupedVirtual]
         .sort((a, b) => b.date.localeCompare(a.date));
 }
 

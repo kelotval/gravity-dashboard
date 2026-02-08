@@ -49,35 +49,62 @@ const renderActiveShape = (props) => {
 };
 
 export function IncomeExpenseChart({ data, plannedIncome = 0 }) {
-    // Calculate KPIs safely from data array
-    const current = data[0] || { Income: 0, Expenses: 0 };
+    // State for interactive header
+    const [activeItem, setActiveItem] = useState(null);
+
+    // Default to latest month when data changes or no hover
+    React.useEffect(() => {
+        if (data && data.length > 0) {
+            setActiveItem(data[data.length - 1]);
+        }
+    }, [data]);
+
+    const current = activeItem || (data && data.length > 0 ? data[data.length - 1] : { Income: 0, Expenses: 0, name: '-' });
     const net = current.Income - current.Expenses;
     const savingsRate = current.Income > 0 ? ((net / current.Income) * 100).toFixed(1) : 0;
+
+    // Helper to format YYYY-MM to "Mon YYYY"
+    const formatMonth = (key) => {
+        if (!key) return "";
+        const [y, m] = key.split('-');
+        const date = new Date(parseInt(y), parseInt(m) - 1);
+        return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    };
 
     return (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col h-auto min-h-[500px] dark:bg-gray-800 dark:border-gray-700">
             <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Income vs Expenses</h3>
-                <span className="text-sm font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full dark:bg-emerald-900/30 dark:text-emerald-400">
+                <div className="flex items-baseline gap-3">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Income vs Expenses</h3>
+                    {current.name && (
+                        <span className="text-sm font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                            {formatMonth(current.name)}
+                        </span>
+                    )}
+                </div>
+                <span className={`text-sm font-medium px-2 py-1 rounded-full ${savingsRate >= 0
+                    ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400'
+                    : 'text-rose-600 bg-rose-50 dark:bg-rose-900/30 dark:text-rose-400'
+                    }`}>
                     {savingsRate}% Savings Rate
                 </span>
             </div>
 
             {/* Top Row KPIs */}
             <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="p-3 bg-gray-50 rounded-lg dark:bg-gray-700/30">
+                <div className="p-3 bg-gray-50 rounded-lg dark:bg-gray-700/30 transition-colors duration-200">
                     <p className="text-xs text-gray-500 mb-1 flex items-center gap-1 dark:text-gray-400">
                         <ArrowUpRight className="w-3 h-3 text-emerald-500" /> Income
                     </p>
                     <p className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">${current.Income.toLocaleString()}</p>
                 </div>
-                <div className="p-3 bg-gray-50 rounded-lg dark:bg-gray-700/30">
+                <div className="p-3 bg-gray-50 rounded-lg dark:bg-gray-700/30 transition-colors duration-200">
                     <p className="text-xs text-gray-500 mb-1 flex items-center gap-1 dark:text-gray-400">
                         <ArrowDownRight className="w-3 h-3 text-rose-500" /> Expenses
                     </p>
                     <p className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">${current.Expenses.toLocaleString()}</p>
                 </div>
-                <div className={`p-3 rounded-lg dark:bg-gray-700/30 ${net >= 0 ? 'bg-emerald-50' : 'bg-rose-50'}`}>
+                <div className={`p-3 rounded-lg dark:bg-gray-700/30 transition-colors duration-200 ${net >= 0 ? 'bg-emerald-50' : 'bg-rose-50'}`}>
                     <p className="text-xs text-gray-500 mb-1 flex items-center gap-1 dark:text-gray-400">
                         <Wallet className={`w-3 h-3 ${net >= 0 ? 'text-emerald-600' : 'text-rose-600'}`} /> Net
                     </p>
@@ -94,6 +121,16 @@ export function IncomeExpenseChart({ data, plannedIncome = 0 }) {
                         data={data}
                         margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                         barSize={40}
+                        onMouseMove={(state) => {
+                            if (state.isTooltipActive && state.activePayload && state.activePayload.length > 0) {
+                                setActiveItem(state.activePayload[0].payload);
+                            }
+                        }}
+                        onMouseLeave={() => {
+                            if (data && data.length > 0) {
+                                setActiveItem(data[data.length - 1]);
+                            }
+                        }}
                     >
                         <defs>
                             <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">

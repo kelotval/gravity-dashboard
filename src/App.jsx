@@ -641,6 +641,46 @@ export default function App() {
         }
     }, [transactions, income, debts, profile, advancedSettings, categoryRules, categories, relocation, incomeHistory, recurringExpenses, activePeriodKey, hasLoadedCloud, householdPin]);
 
+    // Automatic Migration: Fix Positive Manual Expenses (Self-Healing)
+    useEffect(() => {
+        if (!transactions || transactions.length === 0) return;
+
+        let updatedCount = 0;
+        const incomeCategories = ["Income", "Salary", "Wages", "Dividends", "Interest", "Refunds", "Reimbursements"];
+
+        const fixedTransactions = transactions.map(tx => {
+            // Check for candidates: Positive amount
+            const amt = parseAmount(tx.amount);
+            if (amt <= 0) return tx; // Already negative or zero, skip
+
+            // Skip if source is 'amex' or 'amex_csv' (trust existing logic for imported)
+            // Amex refunds are positive, so we skip them.
+            if (tx.source === 'amex' || tx.source === 'amex_csv') return tx;
+
+            // Skip if explicit interesting kind
+            if (tx.kind === 'income' || tx.kind === 'refund' || tx.kind === 'payment' || tx.kind === 'transfer') return tx;
+
+            // Check Category for Income keywords
+            const cat = (tx.category || "").toLowerCase();
+            const isIncomeCat = incomeCategories.some(c => cat.includes(c.toLowerCase()));
+            if (isIncomeCat) return tx;
+
+            // If we are here, it's a Positive amount, non-Amex, non-Income/Refund/Payment.
+            // It is likely a Legacy Manual Expense.
+            updatedCount++;
+            return {
+                ...tx,
+                amount: -amt, // Flip to negative
+                kind: 'expense' // Enforce kind
+            };
+        });
+
+        if (updatedCount > 0) {
+            console.log(`Creating migration: Fixing ${updatedCount} positive manual expenses...`);
+            setTransactions(fixedTransactions);
+        }
+    }, [transactions]); // Safe: second run will find updatedCount = 0
+
 
 
 
@@ -653,9 +693,7 @@ export default function App() {
     const [searchQuery, setSearchQuery] = React.useState("");
 
     // --- Statement-Aware Logic Helpers ---
-    const getPeriodKey = (tx) => {
-        return tx.periodKey || null;
-    };
+    // Removed shadowed getPeriodKey to use imported utility
 
     // Helper to find effective income for a given month
     // Returns the income object effective for that month
@@ -669,6 +707,9 @@ export default function App() {
 
         return effective || sortedHistory[sortedHistory.length - 1] || income;
     };
+
+
+    // --- Classification Helpers ---
 
     // --- Classification Helpers ---
     function inferTransactionKind(tx) {
@@ -697,12 +738,20 @@ export default function App() {
         ];
         if (amt > 0 && incomeKeywords.some(k => desc.includes(k))) return "income";
 
-        // IMPORTANT: Amex statement convention (opposite of typical accounting)
-        // Purchases/Expenses: POSITIVE amounts
-        // Credits/Refunds/Payments: NEGATIVE amounts
-        if (amt > 0) return "expense";
-        if (amt < 0) return "refund";
+        // Internal Storage Convention:
+        // Expenses: NEGATIVE amounts
+        // Credits/Refunds/Payments/Income: POSITIVE amounts
 
+        // If amount is negative, it's an expense (outflow)
+        if (amt < 0) return "expense";
+
+        // If amount is positive, could be Refund, Income, or Payment.
+        // We already checked Income and Payment keywords above.
+        // Default to 'refund' for positive amounts that aren't clearly income/payment
+        // (e.g. returns, statement credits)
+        if (amt > 0) return "refund";
+
+        // Zero amounts
         return "expense";
     }
 
@@ -727,16 +776,25 @@ export default function App() {
             if (h.date) periods.add(h.date);
         });
         transactions.forEach(tx => {
-            const p = getPeriodKey(tx);
+            const p = getPeriodKey(tx); // Now uses robust imported utility
             if (p) periods.add(p);
         });
-        // Add periods covered by recurring expenses
+
+        // Add periods covered by recurring expenses (Correctly expand ranges)
+        const currentM = new Date().toISOString().substring(0, 7);
         recurringExpenses.forEach(expense => {
             if (expense.active !== false) {
-                const start = expense.startMonth || expense.startPeriodKey;
-                const end = expense.endMonth || expense.endPeriodKey;
+                const start = expense.startMonth || expense.startPeriodKey || currentM;
+                const end = expense.endMonth || expense.endPeriodKey; // Open-ended if null
+
+                // Always add start
                 if (start) periods.add(start);
-                if (end) periods.add(end);
+
+                // If the active month is within the range (or after start if open-ended), ensure it's included
+                // This guarantees the current view is never empty in the ledger
+                if (start && activePeriodKey >= start && (!end || activePeriodKey <= end)) {
+                    periods.add(activePeriodKey);
+                }
             }
         });
 
@@ -1146,9 +1204,28 @@ export default function App() {
             ? txData.category !== editingTransaction.category  // Changed category
             : txData.category && txData.category !== "Uncategorized";  // New with category
 
-        // Add manual categorization flag
+        // Auto-detect Kind and Sign based on Category
+        let finalAmount = parseAmount(txData.amount);
+        let finalKind = txData.kind || "expense"; // Default to expense
+
+        const incomeCategories = ["Income", "Salary", "Wages", "Dividends", "Interest", "Refunds", "Reimbursements"];
+        const isIncomeCat = incomeCategories.some(c => (txData.category || "").includes(c));
+
+        if (isIncomeCat) {
+            finalKind = "income";
+            finalAmount = Math.abs(finalAmount); // Ensure positive for income
+        } else {
+            // Assume Expense for everything else
+            finalKind = "expense";
+            finalAmount = -Math.abs(finalAmount); // Ensure negative for expenses
+        }
+
+        // Add flags and normalized data
         const txWithFlag = {
             ...txData,
+            amount: finalAmount,
+            kind: finalKind,
+            source: txData.source || "manual", // Default manual source for created items
             isManualCategory: isManual
         };
 
@@ -1433,12 +1510,47 @@ export default function App() {
 
     const handleDeleteTransaction = (id) => {
         // Handle Virtual/Recurring Transactions
-        if (String(id).startsWith('virtual-')) {
-            if (confirm("This is a Recurring Fixed Expense plan. deleting it here will remove the rule for ALL months.\n\nAre you sure?")) {
-                const parts = String(id).split('-'); // virtual-YYYY-MM-{id}
-                // virtual (0), YYYY (1), MM (2) - so actual ID starts at 3
-                const originalId = parts.slice(3).join('-');
-                setRecurringExpenses(prev => prev.filter(item => item.id !== originalId));
+        if (String(id).startsWith('manual-')) {
+            // Updated Logic: "Delete" for virtual/recurring means "Hide from this month"
+            if (confirm("Do you want to hide this recurring expense for THIS month only?\n\n(The rule will remain active for other months)")) {
+                const parts = String(id).split('-'); // manual-{baseId}-{YYYY}-{MM}
+                // ID format from transactionHelpers: `manual-${expense.id}-${monthKey}`
+                // monthKey is YYYY-MM. 
+                // So parts: [manual, baseId, YYYY, MM]
+                // Wait. ID construction: `manual-${expense.id}-${monthKey}`
+                // If expense.id has dashes, this split is dangerous.
+
+                // Let's use the object property directly if possible, but we only have ID here.
+                // Re-parsing ID:
+                // format: manual-{id}-{YYYY-MM}
+                // But wait, expense.id is a UUID usually? 
+                // transactionHelpers.js: id: `manual-${expense.id}-${monthKey}`
+
+                // Better approach: Find the transaction object first to get the baseId and periodKey
+                const tx = activeTransactionsAll.find(t => t.id === id);
+                if (!tx) {
+                    // Fallback parsing if we can't find it (unlikely)
+                    console.error("Could not find transaction to delete:", id);
+                    return;
+                }
+
+                const { baseId, periodKey } = tx;
+
+                setRecurringExpenses(prev => prev.map(rule => {
+                    if (rule.id === baseId) {
+                        return {
+                            ...rule,
+                            overrides: {
+                                ...(rule.overrides || {}),
+                                [periodKey]: {
+                                    ...(rule.overrides?.[periodKey] || {}),
+                                    disabled: true
+                                }
+                            }
+                        };
+                    }
+                    return rule;
+                }));
             }
             return;
         }
@@ -1816,7 +1928,7 @@ export default function App() {
                 </div>
 
                 {/* Key Metrics Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+                <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${totalInflow > 0 ? '5' : '4'} gap-6 mb-8`}>
                     <MetricCard
                         title="Planned Income"
                         value={`$${activePlannedIncome.toLocaleString()}`}
