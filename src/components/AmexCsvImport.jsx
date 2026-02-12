@@ -251,7 +251,7 @@ export default function AmexCsvImport({ onImport }) {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 dark:bg-gray-800 dark:border-gray-700">
+    <div className="bg-gradient-to-b from-white/[0.04] to-transparent border border-white/[0.05] rounded-2xl shadow-sm backdrop-blur-[2px] p-6">
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
@@ -332,16 +332,16 @@ export default function AmexCsvImport({ onImport }) {
         )}
 
         {preview && (
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
+          <div className="bg-blue-500/[0.05] border border-blue-500/20 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-3">
-              <CheckCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              <h4 className="text-sm font-bold text-blue-900 dark:text-blue-200">
+              <CheckCircle className="w-5 h-5 text-blue-400" />
+              <h4 className="text-sm font-bold text-blue-300">
                 Preview Summary - {selectedPeriod}
               </h4>
             </div>
 
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="bg-white dark:bg-gray-800 p-2 rounded">
+              <div className="bg-white/[0.03] p-2 rounded border border-white/5">
                 <div className="text-xs text-gray-500 dark:text-gray-400">
                   Gross Purchases
                 </div>
@@ -349,7 +349,7 @@ export default function AmexCsvImport({ onImport }) {
                   ${preview.grossPurchases.toFixed(2)}
                 </div>
               </div>
-              <div className="bg-white dark:bg-gray-800 p-2 rounded">
+              <div className="bg-white/[0.03] p-2 rounded border border-white/5">
                 <div className="text-xs text-gray-500 dark:text-gray-400">
                   Refunds
                 </div>
@@ -357,7 +357,7 @@ export default function AmexCsvImport({ onImport }) {
                   ${preview.refunds.toFixed(2)}
                 </div>
               </div>
-              <div className="bg-white dark:bg-gray-800 p-2 rounded">
+              <div className="bg-white/[0.03] p-2 rounded border border-white/5">
                 <div className="text-xs text-gray-500 dark:text-gray-400">
                   Ignored Payments (AMEX)
                 </div>
@@ -365,7 +365,7 @@ export default function AmexCsvImport({ onImport }) {
                   ${preview.payments.toFixed(2)}
                 </div>
               </div>
-              <div className="bg-white dark:bg-gray-800 p-2 rounded">
+              <div className="bg-white/[0.03] p-2 rounded border border-white/5">
                 <div className="text-xs text-gray-500 dark:text-gray-400">
                   Transfers
                 </div>
@@ -373,7 +373,7 @@ export default function AmexCsvImport({ onImport }) {
                   ${preview.transfers.toFixed(2)}
                 </div>
               </div>
-              <div className="bg-white dark:bg-gray-800 p-2 rounded col-span-2">
+              <div className="bg-white/[0.03] p-2 rounded border border-white/5 col-span-2">
                 <div className="text-xs text-gray-500 dark:text-gray-400">
                   Net Spend
                 </div>
@@ -381,7 +381,7 @@ export default function AmexCsvImport({ onImport }) {
                   ${preview.netSpend.toFixed(2)}
                 </div>
               </div>
-              <div className="bg-white dark:bg-gray-800 p-2 rounded">
+              <div className="bg-white/[0.03] p-2 rounded border border-white/5">
                 <div className="text-xs text-gray-500 dark:text-gray-400">
                   Transactions
                 </div>
@@ -389,7 +389,7 @@ export default function AmexCsvImport({ onImport }) {
                   {preview.totalCount}
                 </div>
               </div>
-              <div className="bg-white dark:bg-gray-800 p-2 rounded">
+              <div className="bg-white/[0.03] p-2 rounded border border-white/5">
                 <div className="text-xs text-gray-500 dark:text-gray-400">
                   Duplicates Skipped
                 </div>

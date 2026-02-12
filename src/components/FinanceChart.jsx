@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
     PieChart, Pie, Cell, Legend, Sector
 } from "recharts";
 import { ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, DollarSign, Wallet } from "lucide-react";
@@ -20,7 +20,7 @@ const renderActiveShape = (props) => {
                 {payload.name}
             </text>
             <text x={cx} y={cy} dy={10} textAnchor="middle" fill={fill} className="text-2xl font-extrabold" style={{ fontSize: '1.5rem', fontWeight: 800 }}>
-                {`$${value.toLocaleString()}`}
+                {`$${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
             </text>
             <text x={cx} y={cy} dy={32} textAnchor="middle" fill="#9ca3af" className="text-xs" style={{ fontSize: '0.75rem' }}>
                 {formattedPercent}
@@ -96,20 +96,20 @@ export function IncomeExpenseChart({ data, plannedIncome = 0 }) {
                     <p className="text-xs text-gray-500 mb-1 flex items-center gap-1 dark:text-gray-400">
                         <ArrowUpRight className="w-3 h-3 text-emerald-500" /> Income
                     </p>
-                    <p className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">${current.Income.toLocaleString()}</p>
+                    <p className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">${current.Income.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
                 </div>
                 <div className="p-3 bg-gray-50 rounded-lg dark:bg-gray-700/30 transition-colors duration-200">
                     <p className="text-xs text-gray-500 mb-1 flex items-center gap-1 dark:text-gray-400">
                         <ArrowDownRight className="w-3 h-3 text-rose-500" /> Expenses
                     </p>
-                    <p className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">${current.Expenses.toLocaleString()}</p>
+                    <p className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">${current.Expenses.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
                 </div>
                 <div className={`p-3 rounded-lg dark:bg-gray-700/30 transition-colors duration-200 ${net >= 0 ? 'bg-emerald-50' : 'bg-rose-50'}`}>
                     <p className="text-xs text-gray-500 mb-1 flex items-center gap-1 dark:text-gray-400">
                         <Wallet className={`w-3 h-3 ${net >= 0 ? 'text-emerald-600' : 'text-rose-600'}`} /> Net
                     </p>
                     <p className={`font-bold text-sm sm:text-base ${net >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
-                        {net >= 0 ? '+' : ''}${net.toLocaleString()}
+                        {net >= 0 ? '+' : ''}${net.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                     </p>
                 </div>
             </div>
@@ -117,10 +117,9 @@ export function IncomeExpenseChart({ data, plannedIncome = 0 }) {
             {/* Chart Area */}
             <div className="flex-1 w-full min-h-[220px] relative">
                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
+                    <AreaChart
                         data={data}
                         margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                        barSize={40}
                         onMouseMove={(state) => {
                             if (state.isTooltipActive && state.activePayload && state.activePayload.length > 0) {
                                 setActiveItem(state.activePayload[0].payload);
@@ -134,61 +133,63 @@ export function IncomeExpenseChart({ data, plannedIncome = 0 }) {
                     >
                         <defs>
                             <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
-                                <stop offset="100%" stopColor="#34d399" stopOpacity={1} />
+                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                             </linearGradient>
                             <linearGradient id="expenseGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#f43f5e" stopOpacity={1} />
-                                <stop offset="100%" stopColor="#fb7185" stopOpacity={1} />
+                                <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.2} />
+                                <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
                             </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" opacity={0.4} />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" opacity={0.2} />
                         <XAxis
                             dataKey="name"
                             axisLine={false}
                             tickLine={false}
-                            tick={{ fill: '#9ca3af', fontSize: 12, fontWeight: 500 }}
+                            tick={{ fill: '#9ca3af', fontSize: 11, fontWeight: 500 }}
                             dy={10}
                         />
                         <YAxis
                             axisLine={false}
                             tickLine={false}
-                            tick={{ fill: '#9ca3af', fontSize: 12 }}
+                            tick={{ fill: '#9ca3af', fontSize: 11 }}
                             tickFormatter={(value) => `$${value / 1000}k`}
                         />
                         <Tooltip
-                            cursor={{ fill: 'transparent' }}
                             contentStyle={{
-                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                backgroundColor: '#1f2937',
+                                borderColor: '#374151',
                                 borderRadius: '12px',
-                                border: 'none',
-                                boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                                padding: '12px'
+                                color: '#f3f4f6',
+                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
                             }}
-                            labelStyle={{ color: '#6b7280', marginBottom: '8px', fontSize: '12px' }}
-                            itemStyle={{ fontWeight: 600, fontSize: '13px' }}
-                            formatter={(value) => [`$${value.toLocaleString()}`, undefined]}
+                            itemStyle={{ fontSize: '12px' }}
+                            formatter={(value) => [`$${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`, undefined]}
+                            labelStyle={{ color: '#9ca3af', marginBottom: '8px' }}
                         />
                         <Legend
                             verticalAlign="top"
                             height={36}
                             iconType="circle"
-                            formatter={(value) => <span className="text-gray-900 dark:text-gray-300 font-medium ml-1">{value}</span>}
+                            formatter={(value) => <span className="text-gray-900 dark:text-gray-300 font-medium ml-1 text-xs">{value}</span>}
                         />
-                        <Bar
+                        <Area
+                            type="monotone"
                             dataKey="Income"
+                            stroke="#10b981"
+                            strokeWidth={2}
                             fill="url(#incomeGradient)"
-                            radius={[6, 6, 0, 0]}
                             animationDuration={1500}
                         />
-                        <Bar
+                        <Area
+                            type="monotone"
                             dataKey="Expenses"
+                            stroke="#f43f5e"
+                            strokeWidth={2}
                             fill="url(#expenseGradient)"
-                            radius={[6, 6, 0, 0]}
                             animationDuration={1500}
-                            animationBegin={300}
                         />
-                    </BarChart>
+                    </AreaChart>
                 </ResponsiveContainer>
             </div>
         </div>
@@ -215,12 +216,12 @@ export function CategoryPieChart({ data }) {
                             data={data}
                             cx="50%"
                             cy="50%"
-                            innerRadius="50%"
-                            outerRadius="70%"
+                            innerRadius={60}
+                            outerRadius={80}
                             fill="#8884d8"
                             dataKey="value"
                             onMouseEnter={onPieEnter}
-                            paddingAngle={4}
+                            paddingAngle={2}
                             stroke="none"
                         >
                             {data.map((entry, index) => (
@@ -242,13 +243,13 @@ export function CategoryPieChart({ data }) {
                         onMouseEnter={() => setActiveIndex(index)}
                     >
                         <div
-                            className="w-3 h-3 rounded-full shadow-sm flex-shrink-0"
+                            className="w-2 h-2 rounded-full shadow-sm flex-shrink-0"
                             style={{ backgroundColor: COLORS[index % COLORS.length] }}
                         />
                         <div className="min-w-0 flex-1">
                             <p className="text-xs font-medium text-gray-900 truncate dark:text-white capitalize">{entry.name}</p>
                             <div className="flex justify-between items-baseline">
-                                <p className="text-[10px] text-gray-500 dark:text-gray-400 font-mono">${entry.value.toLocaleString()}</p>
+                                <p className="text-[10px] text-gray-500 dark:text-gray-400 font-mono">${entry.value.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
                             </div>
                         </div>
                     </div>

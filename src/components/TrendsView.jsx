@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { AreaChart, Area, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { TrendingUp, TrendingDown, DollarSign, Activity, Calendar, Sparkles, AlertCircle, Target, Zap, BarChart3 } from "lucide-react";
+import { PageContainer } from "./common/PageContainer";
+import { SurfaceCard } from './common/SurfaceCard';
 
 export default function TrendsView({ income = {}, transactions = [], debts = [] }) {
     const [selectedPeriod, setSelectedPeriod] = useState('6mo'); // 3mo, 6mo, 12mo, ytd, all
@@ -34,18 +36,8 @@ export default function TrendsView({ income = {}, transactions = [], debts = [] 
         const grouped = {};
         const totalIncome = Object.values(income).reduce((a, b) => a + b, 0);
 
-        console.log('TrendsView Debug:', {
-            period: selectedPeriod,
-            startDate: startDate.toISOString(),
-            totalTransactions: transactions.length,
-            totalIncome
-        });
-
         transactions.forEach(tx => {
-            if (!tx.date) {
-                console.log('Transaction without date:', tx);
-                return;
-            }
+            if (!tx.date) return;
 
             // Try parsing date - handle both string and Date object
             let txDate;
@@ -56,10 +48,7 @@ export default function TrendsView({ income = {}, transactions = [], debts = [] 
             }
 
             // Check if date is valid
-            if (isNaN(txDate.getTime())) {
-                console.log('Invalid date:', tx.date, tx);
-                return;
-            }
+            if (isNaN(txDate.getTime())) return;
 
             if (txDate < startDate) return;
 
@@ -76,15 +65,13 @@ export default function TrendsView({ income = {}, transactions = [], debts = [] 
                 };
             }
 
-            if (tx.amount > 0) {
-                grouped[monthKey].expenses += tx.amount;
+            if (tx.amount < 0 && tx.kind !== 'transfer') {
+                grouped[monthKey].expenses += Math.abs(tx.amount);
                 grouped[monthKey].txCount += 1;
                 const category = tx.category || 'Uncategorized';
-                grouped[monthKey].byCategory[category] = (grouped[monthKey].byCategory[category] || 0) + tx.amount;
+                grouped[monthKey].byCategory[category] = (grouped[monthKey].byCategory[category] || 0) + Math.abs(tx.amount);
             }
         });
-
-        console.log('Grouped months:', Object.keys(grouped).length, grouped);
 
         // Convert to array and sort by month
         const result = Object.values(grouped)
@@ -95,9 +82,8 @@ export default function TrendsView({ income = {}, transactions = [], debts = [] 
                 savingsRate: m.income > 0 ? ((m.income - m.expenses) / m.income * 100) : 0
             }));
 
-        console.log('Final monthlyData:', result);
         return result;
-    }, [transactions, income, selectedPeriod]); // Added selectedPeriod to dependencies
+    }, [transactions, income, selectedPeriod]);
 
     // Calculate debt trajectory
     const debtTrajectory = useMemo(() => {
@@ -199,225 +185,218 @@ export default function TrendsView({ income = {}, transactions = [], debts = [] 
         return results;
     }, [monthlyData, debts]);
 
+    const [activeChart, setActiveChart] = useState('cashflow'); // cashflow, savings, debt
+
+    // ... (keep monthlyData, debtTrajectory, categoryVelocity, insights logic same) ...
+
+    const PeriodSelector = (
+        <div className="flex bg-white/[0.03] p-1 rounded-xl border border-white/5">
+            {['3mo', '6mo', '12mo', 'ytd', 'all'].map(period => (
+                <button
+                    key={period}
+                    onClick={() => setSelectedPeriod(period)}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-300 ${selectedPeriod === period
+                        ? 'bg-white/[0.08] text-white shadow-sm ring-1 ring-white/10'
+                        : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.02]'
+                        }`}
+                >
+                    {period === 'ytd' ? 'YTD' : period === 'all' ? 'All' : period.toUpperCase()}
+                </button>
+            ))}
+        </div>
+    );
+
     return (
-        <div className="space-y-6 pb-12">
-            {/* Header with Period Selector */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Financial Trends</h2>
-                    <p className="text-gray-500 dark:text-gray-400">Historical analysis from real transaction data</p>
-                </div>
-                <div className="flex gap-2">
-                    {['3mo', '6mo', '12mo', 'ytd', 'all'].map(period => (
-                        <button
-                            key={period}
-                            onClick={() => setSelectedPeriod(period)}
-                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${selectedPeriod === period
-                                ? 'bg-indigo-600 text-white shadow-lg'
-                                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+        <PageContainer
+            title="Financial Trends"
+            subtitle="Historical analysis & patterns"
+            action={PeriodSelector}
+        >
+            {/* Predictive Insights - Key Takeaways */}
+            {insights.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                    {insights.map((insight, idx) => (
+                        <SurfaceCard
+                            key={idx}
+                            className={`!p-4 flex items-start gap-3 transition-all ${insight.type === 'positive' ? 'border-emerald-500/20' :
+                                insight.type === 'warning' ? 'border-amber-500/20' :
+                                    'border-blue-500/20'
                                 }`}
                         >
-                            {period === 'ytd' ? 'YTD' : period === 'all' ? 'All' : period.toUpperCase()}
-                        </button>
+                            <insight.icon className={`w-4 h-4 mt-0.5 ${insight.type === 'positive' ? 'text-emerald-400' :
+                                insight.type === 'warning' ? 'text-amber-400' :
+                                    'text-blue-400'
+                                }`} />
+                            <span className="text-sm text-gray-300 leading-relaxed font-light">
+                                {insight.message}
+                            </span>
+                        </SurfaceCard>
                     ))}
                 </div>
+            )}
+
+            {/* Chart Tabs */}
+            <div className="flex items-center gap-2 mb-6 border-b border-white/5 pb-1">
+                <button
+                    onClick={() => setActiveChart('cashflow')}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeChart === 'cashflow' ? 'border-indigo-500 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+                >
+                    Cash Flow
+                </button>
+                <button
+                    onClick={() => setActiveChart('savings')}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeChart === 'savings' ? 'border-emerald-500 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+                >
+                    Savings Rate
+                </button>
+                <button
+                    onClick={() => setActiveChart('debt')}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeChart === 'debt' ? 'border-rose-500 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+                >
+                    Debt Reduction
+                </button>
             </div>
 
-            {/* Predictive Insights */}
-            {insights.length > 0 && (
-                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-2xl p-6 border border-indigo-200 dark:border-indigo-800">
-                    <div className="flex items-center gap-2 mb-4">
-                        <Zap className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Predictive Insights</h3>
+            {/* Main Chart Area */}
+            <SurfaceCard className="min-h-[400px]">
+                {activeChart === 'cashflow' && (
+                    <div className="animate-in fade-in duration-500">
+                        <div className="flex items-center justify-between mb-8">
+                            <div>
+                                <h3 className="text-lg font-medium text-white tracking-tight">Income vs Expenses</h3>
+                                <p className="text-sm text-gray-500 mt-1">Cash flow analysis over time</p>
+                            </div>
+                            <BarChart3 className="w-5 h-5 text-gray-600" />
+                        </div>
+                        <div className="h-80 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#34D399" stopOpacity={0.1} />
+                                            <stop offset="95%" stopColor="#34D399" stopOpacity={0} />
+                                        </linearGradient>
+                                        <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#F87171" stopOpacity={0.1} />
+                                            <stop offset="95%" stopColor="#F87171" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
+                                    <XAxis
+                                        dataKey="monthLabel"
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tick={{ fill: '#525252', fontSize: 11 }}
+                                        dy={10}
+                                    />
+                                    <YAxis
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tick={{ fill: '#525252', fontSize: 11 }}
+                                        tickFormatter={(val) => `$${val / 1000}k`}
+                                    />
+                                    <Tooltip
+                                        contentStyle={{
+                                            backgroundColor: 'rgba(23, 23, 23, 0.9)',
+                                            borderColor: 'rgba(255, 255, 255, 0.05)',
+                                            borderRadius: '1rem',
+                                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
+                                            color: '#F3F4F6',
+                                            backdropFilter: 'blur(8px)'
+                                        }}
+                                        itemStyle={{ fontSize: '12px' }}
+                                        formatter={(value) => [`$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, undefined]}
+                                    />
+                                    <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
+                                    <Area type="monotone" dataKey="income" stroke="#34D399" fill="url(#colorIncome)" strokeWidth={2} name="Income" />
+                                    <Area type="monotone" dataKey="expenses" stroke="#F87171" fill="url(#colorExpenses)" strokeWidth={2} name="Expenses" />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {insights.map((insight, idx) => (
-                            <div
-                                key={idx}
-                                className={`flex items-center gap-3 p-4 rounded-xl ${insight.type === 'positive' ? 'bg-emerald-100 dark:bg-emerald-900/30' :
-                                    insight.type === 'warning' ? 'bg-amber-100 dark:bg-amber-900/30' :
-                                        'bg-blue-100 dark:bg-blue-900/30'
-                                    }`}
-                            >
-                                <insight.icon className={`w-5 h-5 ${insight.type === 'positive' ? 'text-emerald-600 dark:text-emerald-400' :
-                                    insight.type === 'warning' ? 'text-amber-600 dark:text-amber-400' :
-                                        'text-blue-600 dark:text-blue-400'
-                                    }`} />
-                                <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                                    {insight.message}
-                                </span>
+                )}
+
+                {activeChart === 'savings' && (
+                    <div className="animate-in fade-in duration-500">
+                        <div className="flex items-center justify-between mb-8">
+                            <div>
+                                <h3 className="text-lg font-medium text-white tracking-tight">Savings Rate</h3>
+                                <p className="text-sm text-gray-500 mt-1">Target: 20%</p>
+                            </div>
+                            <Target className="w-5 h-5 text-emerald-500/50" />
+                        </div>
+                        <div className="h-80 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
+                                    <XAxis dataKey="monthLabel" axisLine={false} tickLine={false} tick={{ fill: '#525252', fontSize: 11 }} dy={10} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#525252', fontSize: 11 }} />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: 'rgba(23, 23, 23, 0.9)', borderColor: 'rgba(255, 255, 255, 0.05)', borderRadius: '1rem' }}
+                                        formatter={(value) => [`${value.toFixed(1)}%`, undefined]}
+                                    />
+                                    <Line type="monotone" dataKey="savingsRate" stroke="#34D399" strokeWidth={3} dot={{ fill: '#059669' }} activeDot={{ r: 6 }} name="Savings Rate %" />
+                                    <Line type="monotone" dataKey={() => 20} stroke="#525252" strokeWidth={1} strokeDasharray="4 4" name="Target (20%)" dot={false} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                )}
+
+                {activeChart === 'debt' && (
+                    <div className="animate-in fade-in duration-500">
+                        <div className="flex items-center justify-between mb-8">
+                            <div>
+                                <h3 className="text-lg font-medium text-white tracking-tight">Debt Reduction</h3>
+                                <p className="text-sm text-gray-500 mt-1">Projected pay-down path</p>
+                            </div>
+                            <Activity className="w-5 h-5 text-indigo-500/50" />
+                        </div>
+                        <div className="h-80 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={debtTrajectory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="colorDebt" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#6366F1" stopOpacity={0.1} />
+                                            <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
+                                    <XAxis dataKey="monthLabel" axisLine={false} tickLine={false} tick={{ fill: '#525252', fontSize: 11 }} dy={10} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#525252', fontSize: 11 }} />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: 'rgba(23, 23, 23, 0.9)', borderColor: 'rgba(255, 255, 255, 0.05)', borderRadius: '1rem' }}
+                                        formatter={(value) => [`$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, undefined]}
+                                    />
+                                    <Area type="monotone" dataKey="totalDebt" stroke="#6366F1" fill="url(#colorDebt)" strokeWidth={2} name="Total Debt" />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                )}
+            </SurfaceCard>
+
+            {/* Category Velocity (Simplified) */}
+            {(categoryVelocity.increasing.length > 0 || categoryVelocity.decreasing.length > 0) && (
+                <div className="mt-8">
+                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Spending Shifts</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {categoryVelocity.increasing.map((cat, idx) => (
+                            <div key={`inc-${idx}`} className="flex items-center justify-between p-3 bg-rose-500/[0.05] border border-rose-500/10 rounded-lg">
+                                <span className="text-sm font-medium text-gray-300">{cat.category}</span>
+                                <span className="text-sm font-bold text-rose-400">+{Math.round(cat.percentChange)}%</span>
+                            </div>
+                        ))}
+                        {categoryVelocity.decreasing.map((cat, idx) => (
+                            <div key={`dec-${idx}`} className="flex items-center justify-between p-3 bg-emerald-500/[0.05] border border-emerald-500/10 rounded-lg">
+                                <span className="text-sm font-medium text-gray-300">{cat.category}</span>
+                                <span className="text-sm font-bold text-emerald-400">{Math.round(cat.percentChange)}%</span>
                             </div>
                         ))}
                     </div>
                 </div>
             )}
-
-            {/* Income vs Expenses Chart */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700">
-                <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Income vs Expenses Trajectory</h3>
-                    <BarChart3 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                </div>
-                <div className="h-80 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={monthlyData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                            <defs>
-                                <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                                </linearGradient>
-                                <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                            <XAxis dataKey="monthLabel" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
-                            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
-                            <Tooltip
-                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                formatter={(value) => `$${value.toLocaleString()}`}
-                            />
-                            <Legend />
-                            <Area type="monotone" dataKey="income" stroke="#10b981" fill="url(#colorIncome)" strokeWidth={2} name="Income" />
-                            <Area type="monotone" dataKey="expenses" stroke="#f43f5e" fill="url(#colorExpenses)" strokeWidth={2} name="Expenses" />
-                        </LineChart>
-                    </ResponsiveContainer>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Savings Rate Evolution */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700">
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Savings Rate Evolution</h3>
-                        <Target className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <div className="h-64 w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                                <XAxis dataKey="monthLabel" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
-                                <Tooltip
-                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                    formatter={(value) => `${value.toFixed(1)}%`}
-                                />
-                                <Line type="monotone" dataKey="savingsRate" stroke="#10b981" strokeWidth={3} dot={{ fill: '#10b981', r: 4 }} name="Savings Rate %" />
-                                <Line type="monotone" dataKey={() => 20} stroke="#6366f1" strokeWidth={2} strokeDasharray="5 5" name="Target (20%)" />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-
-                {/* Debt Trajectory */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700">
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Debt Reduction Progress</h3>
-                        <Activity className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                    </div>
-                    <div className="h-64 w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={debtTrajectory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="colorDebt" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#a855f7" stopOpacity={0.8} />
-                                        <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                                <XAxis dataKey="monthLabel" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
-                                <Tooltip
-                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                    formatter={(value) => `$${value.toLocaleString()}`}
-                                />
-                                <Area type="monotone" dataKey="totalDebt" stroke="#a855f7" fill="url(#colorDebt)" strokeWidth={3} name="Total Debt" />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-            </div>
-
-            {/* Category Velocity */}
-            {(categoryVelocity.increasing.length > 0 || categoryVelocity.decreasing.length > 0) && (
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700">
-                    <div className="flex items-center gap-2 mb-6">
-                        <TrendingUp className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Category Spending Velocity</h3>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">(Month-over-Month)</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Increasing */}
-                        {categoryVelocity.increasing.length > 0 && (
-                            <div>
-                                <h4 className="text-sm font-bold text-red-600 dark:text-red-400 mb-3 flex items-center gap-2">
-                                    <TrendingUp className="w-4 h-4" />
-                                    Increasing Categories
-                                </h4>
-                                <div className="space-y-2">
-                                    {categoryVelocity.increasing.map((cat, idx) => (
-                                        <div key={idx} className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 border border-red-200 dark:border-red-800">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <span className="font-semibold text-gray-900 dark:text-white">{cat.category}</span>
-                                                <span className="text-sm font-bold text-red-600 dark:text-red-400">
-                                                    +${Math.abs(cat.change).toLocaleString()}
-                                                </span>
-                                            </div>
-                                            <div className="text-xs text-gray-600 dark:text-gray-400">
-                                                ${cat.previous.toLocaleString()} → ${cat.current.toLocaleString()}
-                                                <span className="ml-2 text-red-600 dark:text-red-400 font-bold">
-                                                    ({cat.percentChange > 0 ? '+' : ''}{cat.percentChange.toFixed(0)}%)
-                                                </span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Decreasing */}
-                        {categoryVelocity.decreasing.length > 0 && (
-                            <div>
-                                <h4 className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mb-3 flex items-center gap-2">
-                                    <TrendingDown className="w-4 h-4" />
-                                    Decreasing Categories
-                                </h4>
-                                <div className="space-y-2">
-                                    {categoryVelocity.decreasing.map((cat, idx) => (
-                                        <div key={idx} className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3 border border-emerald-200 dark:border-emerald-800">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <span className="font-semibold text-gray-900 dark:text-white">{cat.category}</span>
-                                                <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                                                    -${Math.abs(cat.change).toLocaleString()}
-                                                </span>
-                                            </div>
-                                            <div className="text-xs text-gray-600 dark:text-gray-400">
-                                                ${cat.previous.toLocaleString()} → ${cat.current.toLocaleString()}
-                                                <span className="ml-2 text-emerald-600 dark:text-emerald-400 font-bold">
-                                                    ({cat.percentChange.toFixed(0)}%)
-                                                </span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {/* No Data State */}
-            {monthlyData.length === 0 && (
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-12 text-center border border-gray-200 dark:border-gray-700">
-                    <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Transaction Data Available</h3>
-                    <p className="text-gray-600 dark:text-gray-400">
-                        Add transactions to see historical trends and insights
-                    </p>
-                </div>
-            )}
-        </div>
+        </PageContainer>
     );
+
 }

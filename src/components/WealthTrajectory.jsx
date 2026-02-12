@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { TrendingUp, TrendingDown, DollarSign, Zap, Target } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function WealthTrajectory({ wealthMetrics }) {
     // Safely extract values with defaults
@@ -62,7 +62,7 @@ export default function WealthTrajectory({ wealthMetrics }) {
                             <DollarSign className={`w-5 h-5 ${isNegative ? 'text-red-500' : 'text-emerald-500'}`} />
                         </div>
                         <div className={`text-3xl font-bold ${isNegative ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                            ${Math.abs(netWorth).toLocaleString()}
+                            ${Math.abs(netWorth).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                             {isNegative && <span className="text-lg ml-1">debt</span>}
                         </div>
                     </div>
@@ -92,104 +92,60 @@ export default function WealthTrajectory({ wealthMetrics }) {
                             <Zap className="w-5 h-5 text-orange-500" />
                         </div>
                         <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                            ${monthlyInterestBurn.toLocaleString()}/mo
+                            ${monthlyInterestBurn.toLocaleString(undefined, { maximumFractionDigits: 2 })}/mo
                         </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             Interest paid on debts
                         </p>
                     </div>
-
-                    {/* Projections */}
-                    <div className="bg-white dark:bg-gray-700 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-600">
-                        <div className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">Projections</div>
-                        <div className="space-y-2">
-                            <div className="flex justify-between items-center">
-                                <span className="text-sm text-gray-600 dark:text-gray-400">6 Months</span>
-                                <span className={`font-bold ${projections.projection6M < 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>
-                                    ${Math.abs(projections.projection6M).toLocaleString()}
-                                    {projections.projection6M < 0 && <span className="text-xs ml-1">debt</span>}
-                                </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-sm text-gray-600 dark:text-gray-400">12 Months</span>
-                                <span className={`font-bold ${projections.projection12M < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                                    ${Math.abs(projections.projection12M).toLocaleString()}
-                                    {projections.projection12M < 0 && <span className="text-xs ml-1">debt</span>}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Months to Positive (if negative) */}
-                    {isNegative && projections.monthsToPositive && (
-                        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl p-5 shadow-sm border border-emerald-200 dark:border-emerald-800">
-                            <div className="text-sm font-medium text-emerald-800 dark:text-emerald-300 mb-3">
-                                Path to Positive Net Worth
-                            </div>
-                            <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mb-3">
-                                {projections.monthsToPositive} months
-                            </div>
-                            {/* Progress bar */}
-                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
-                                <div
-                                    className="bg-gradient-to-r from-emerald-500 to-teal-500 h-full rounded-full transition-all duration-500"
-                                    style={{ width: `${Math.min(100, (6 / projections.monthsToPositive) * 100)}%` }}
-                                />
-                            </div>
-                            <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-2">
-                                At current velocity of ${monthlyVelocity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo
-                            </p>
-                        </div>
-                    )}
                 </div>
 
                 {/* Right: Chart */}
                 <div className="bg-white dark:bg-gray-700 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-600">
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">12-Month Projection</h3>
                     <ResponsiveContainer width="100%" height={300}>
-                        <LineChart data={projections.chartData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-600" />
+                        <AreaChart data={projections.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <defs>
+                                <linearGradient id="colorWealth" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.2} />
+                                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" opacity={0.2} />
                             <XAxis
                                 dataKey="month"
-                                stroke="#6b7280"
-                                className="dark:stroke-gray-400"
-                                style={{ fontSize: '12px' }}
+                                axisLine={false}
+                                tickLine={false}
+                                tick={{ fill: '#9ca3af', fontSize: 11 }}
+                                dy={10}
                             />
                             <YAxis
-                                stroke="#6b7280"
-                                className="dark:stroke-gray-400"
-                                style={{ fontSize: '12px' }}
-                                tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                                axisLine={false}
+                                tickLine={false}
+                                tick={{ fill: '#9ca3af', fontSize: 11 }}
+                                tickFormatter={(val) => `$${val / 1000}k`}
                             />
                             <Tooltip
                                 contentStyle={{
-                                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                    border: '1px solid #e5e7eb',
-                                    borderRadius: '8px',
-                                    padding: '8px'
+                                    borderRadius: '12px',
+                                    border: '1px solid #374151',
+                                    backgroundColor: '#1f2937',
+                                    color: '#f3f4f6',
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                                 }}
-                                formatter={(value) => [`$${value.toLocaleString()}`, 'Net Worth']}
+                                itemStyle={{ fontSize: '12px' }}
+                                formatter={(value) => [`$${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`, 'Net Worth']}
+                                labelStyle={{ color: '#9ca3af', marginBottom: '8px' }}
                             />
-                            <Line
+                            <Area
                                 type="monotone"
                                 dataKey="value"
-                                stroke="#6366f1"
-                                strokeWidth={3}
-                                dot={{ fill: '#6366f1', r: 4 }}
-                                activeDot={{ r: 6 }}
+                                stroke="#8b5cf6"
+                                strokeWidth={2}
+                                fill="url(#colorWealth)"
+                                animationDuration={1500}
                             />
-                            {/* Zero line if crossing */}
-                            {projections.chartData.some(d => d.value < 0) && projections.chartData.some(d => d.value >= 0) && (
-                                <Line
-                                    type="monotone"
-                                    dataKey={() => 0}
-                                    stroke="#dc2626"
-                                    strokeWidth={1}
-                                    strokeDasharray="5 5"
-                                    dot={false}
-                                />
-                            )}
-                        </LineChart>
+                        </AreaChart>
                     </ResponsiveContainer>
                     <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
                         Based on monthly velocity of ${monthlyVelocity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo

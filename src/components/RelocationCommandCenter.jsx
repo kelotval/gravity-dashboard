@@ -3,6 +3,7 @@ import { Globe, TrendingUp, DollarSign, AlertTriangle, Copy, Download, Upload, P
 import { computeRelocationOutcome, toAud } from "../data/relocationOffers";
 import { MoneyBreakdownTab, AssumptionsTab, NegotiationSimulatorTab, AIInsights } from "./RelocationTabs";
 import CareerPathSimulator from "./CareerPathSimulator";
+import { PageContainer } from "./common/PageContainer";
 
 export default function RelocationCommandCenter({
     relocation,
@@ -173,23 +174,11 @@ export default function RelocationCommandCenter({
     const selectedOffers = offers.filter(o => selectedOfferIds.includes(o.id));
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex justify-between items-center bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg text-white shadow-lg">
-                        <Globe className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                            Relocation Command Center
-                            <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full">v2.0</span>
-                        </h2>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Simulate international career moves & wealth impact</p>
-                    </div>
-                </div>
-            </div>
-
+        <PageContainer
+            title="Relocation Command Center"
+            subtitle="Simulate international career moves & wealth impact"
+            activeMonth="v2.0"
+        >
             <div className="h-[calc(100vh-200px)] min-h-[800px]">
                 <CareerPathSimulator
                     relocation={relocation}
@@ -201,7 +190,7 @@ export default function RelocationCommandCenter({
                     addNewOffer={addNewOffer}
                 />
             </div>
-        </div>
+        </PageContainer>
     );
 }
 
@@ -307,7 +296,7 @@ function SummaryTab({ selectedOffers, outcomes, bestCashflow, bestQuality, basel
                             key={offer.id}
                             className={`relative rounded-2xl p-5 border-2 transition-all duration-200 ${isBest
                                 ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 shadow-lg shadow-emerald-500/20'
-                                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
+                                : 'border-white/10 bg-white/5'
                                 }`}
                         >
                             {isBest && (
@@ -317,12 +306,12 @@ function SummaryTab({ selectedOffers, outcomes, bestCashflow, bestQuality, basel
                             )}
 
                             <div className="mb-4">
-                                <h4 className="font-bold text-lg text-gray-900 dark:text-white mb-1">{offer.name}</h4>
+                                <h4 className="font-bold text-lg text-white mb-1">{offer.name}</h4>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">{offer.country}</p>
                             </div>
 
                             <div className="mb-4">
-                                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+                                <div className="text-3xl font-bold text-white mb-1">
                                     ${Math.round(outcome.netAfterDebtsAudMonthly).toLocaleString()}
                                 </div>
                                 {!isBaseline && (
@@ -362,12 +351,12 @@ function SummaryTab({ selectedOffers, outcomes, bestCashflow, bestQuality, basel
                                         />
                                     </svg>
                                     <div className="absolute inset-0 flex items-center justify-center">
-                                        <span className="text-sm font-bold text-gray-900 dark:text-white">{outcome.qualityScore}</span>
+                                        <span className="text-sm font-bold text-white">{outcome.qualityScore}</span>
                                     </div>
                                 </div>
                                 <div className="flex-1">
                                     <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Quality Score</div>
-                                    <div className="text-sm font-semibold text-gray-900 dark:text-white">{verdict}</div>
+                                    <div className="text-sm font-semibold text-white">{verdict}</div>
                                 </div>
                             </div>
                         </div>
@@ -376,20 +365,20 @@ function SummaryTab({ selectedOffers, outcomes, bestCashflow, bestQuality, basel
             </div>
 
             {/* 3) VISUAL DELTA STRIP */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
+            <div className="bg-surface rounded-2xl p-6 border border-surface-highlight">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-bold text-gray-900 dark:text-white">Net Income Comparison</h3>
-                    <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                    <h3 className="font-bold text-white">Net Income Comparison</h3>
+                    <div className="flex items-center gap-2 bg-white/5 rounded-lg p-1">
                         <button
                             onClick={() => setShowDeltaAnnual(false)}
-                            className={`px-3 py-1 rounded text-sm font-medium transition ${!showDeltaAnnual ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow' : 'text-gray-600 dark:text-gray-400'
+                            className={`px-3 py-1 rounded text-sm font-medium transition ${!showDeltaAnnual ? 'bg-white/10 text-white shadow' : 'text-gray-400'
                                 }`}
                         >
                             Monthly
                         </button>
                         <button
                             onClick={() => setShowDeltaAnnual(true)}
-                            className={`px-3 py-1 rounded text-sm font-medium transition ${showDeltaAnnual ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow' : 'text-gray-600 dark:text-gray-400'
+                            className={`px-3 py-1 rounded text-sm font-medium transition ${showDeltaAnnual ? 'bg-white dark:bg-gray-600 text-white shadow' : 'text-gray-600 dark:text-gray-400'
                                 }`}
                         >
                             Annual
@@ -412,8 +401,8 @@ function SummaryTab({ selectedOffers, outcomes, bestCashflow, bestQuality, basel
                         return (
                             <div key={offer.id} className="space-y-2">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-sm font-medium text-gray-900 dark:text-white">{offer.name}</span>
-                                    <span className="text-sm font-bold text-gray-900 dark:text-white">
+                                    <span className="text-sm font-medium text-white">{offer.name}</span>
+                                    <span className="text-sm font-bold text-white">
                                         ${Math.round(value).toLocaleString()}
                                     </span>
                                 </div>
@@ -469,7 +458,7 @@ function MetricRow({ label, value, negative, bold }) {
     return (
         <div className="flex justify-between items-center">
             <span className={`text-sm ${bold ? 'font-bold' : ''} text-gray-600 dark:text-gray-400`}>{label}:</span>
-            <span className={`text-sm ${bold ? 'font-bold text-lg' : ''} ${negative ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
+            <span className={`text-sm ${bold ? 'font-bold text-lg' : ''} ${negative ? 'text-red-600 dark:text-red-400' : 'text-white'}`}>
                 {value}
             </span>
         </div>
@@ -481,10 +470,10 @@ function OfferCard({ offer, outcome, isBaseline, isBestCashflow, isBestQuality, 
     const [showDetails, setShowDetails] = useState(false);
 
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-lg transition-all duration-200">
+        <div className="bg-surface rounded-2xl p-6 border border-surface-highlight shadow-sm hover:shadow-lg transition-all duration-200">
             {/* Header */}
             <div className="mb-4">
-                <h4 className="font-bold text-xl text-gray-900 dark:text-white flex items-center gap-2 mb-1">
+                <h4 className="font-bold text-xl text-white flex items-center gap-2 mb-1">
                     <Globe className="w-5 h-5 text-gray-400" />
                     {offer.name}
                 </h4>
@@ -498,7 +487,7 @@ function OfferCard({ offer, outcome, isBaseline, isBestCashflow, isBestQuality, 
 
             {/* Big Metric */}
             <div className="mb-5">
-                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+                <div className="text-3xl font-bold text-white mb-1">
                     ${Math.round(outcome.netAfterDebtsAudMonthly).toLocaleString()}
                 </div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">net after debts/mo</div>
@@ -510,14 +499,14 @@ function OfferCard({ offer, outcome, isBaseline, isBestCashflow, isBestQuality, 
                     <Clock className="w-4 h-4 text-gray-400" />
                     <div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">Runway</div>
-                        <div className="font-semibold text-gray-900 dark:text-white">{Math.round(outcome.runwayMonths)}mo</div>
+                        <div className="font-semibold text-white">{Math.round(outcome.runwayMonths)}mo</div>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-gray-400" />
                     <div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">Savings</div>
-                        <div className="font-semibold text-gray-900 dark:text-white">{Math.round(outcome.savingsRatePct)}%</div>
+                        <div className="font-semibold text-white">{Math.round(outcome.savingsRatePct)}%</div>
                     </div>
                 </div>
             </div>
@@ -552,7 +541,7 @@ function OfferCard({ offer, outcome, isBaseline, isBestCashflow, isBestQuality, 
                         />
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-xl font-bold text-gray-900 dark:text-white">{outcome.qualityScore}</span>
+                        <span className="text-xl font-bold text-white">{outcome.qualityScore}</span>
                     </div>
                 </div>
 
@@ -636,7 +625,7 @@ function DecisionConfidence({ selectedOffers, outcomes, bestCashflow }) {
         <div className="bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-4">
                 <div>
-                    <h3 className="font-bold text-gray-900 dark:text-white text-lg">Decision Confidence</h3>
+                    <h3 className="font-bold text-white text-lg">Decision Confidence</h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{explanation}</p>
                 </div>
                 <div className="text-right">
