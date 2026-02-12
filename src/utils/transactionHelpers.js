@@ -116,19 +116,28 @@ export function getComputedTransactionsForMonth(monthKey, importedTransactions, 
     // we assume the user manually entered it or imported it, so we skip the virtual one.
     const dedupedVirtual = virtualCandidates.filter(virtual => {
         const isDuplicate = realTransactions.some(real => {
+            // Match 2: Descriptions (fuzzy match)
+            const cleanDesc = (s) => (s || "").toLowerCase()
+                .replace(/payment|direct debit|monthly|autopay|online\b/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            const realDesc = cleanDesc(real.description || real.item);
+            const virtDesc = cleanDesc(virtual.description);
+
             // Match 1: Extract amounts (handle sign differences)
             const realAmt = Math.abs(parseAmount(real.amount));
             const virtAmt = Math.abs(parseAmount(virtual.amount));
 
-            // Match 2: Descriptions (fuzzy match)
-            const realDesc = (real.description || real.item || "").toLowerCase().trim();
-            const virtDesc = (virtual.description || "").toLowerCase().trim();
+            // Fuzzy amount match: 
+            // - Less than 1 cent difference (strict)
+            // - OR for >$100, less than $1.01 difference OR < 1% difference
+            const absDiff = Math.abs(realAmt - virtAmt);
+            const pctDiff = virtAmt > 0 ? (absDiff / virtAmt) : 0;
+            const amountMatch = (absDiff < 0.01) || (realAmt > 100 && (absDiff < 1.01 || pctDiff < 0.01));
 
-            // Strict amount match (cents matter for duplicates)
-            const amountMatch = Math.abs(realAmt - virtAmt) < 0.01;
-
-            // Description match
-            const descMatch = realDesc === virtDesc || realDesc.includes(virtDesc) || virtDesc.includes(realDesc);
+            // Description match: one contains the other (after cleaning)
+            const descMatch = virtDesc && (realDesc.includes(virtDesc) || virtDesc.includes(realDesc));
 
             // Category match (as a strong fallback if amount matches exactly)
             const realCat = (real.category || "").toLowerCase().trim();
@@ -136,8 +145,7 @@ export function getComputedTransactionsForMonth(monthKey, importedTransactions, 
             const categoryMatch = realCat === virtCat;
 
             // Strict checking: Amount match + (Description match OR Category match)
-            // But if Amount > 100, assume it's a duplicate if amounts match perfectly (highly unlikely to be coincidence)
-            if (amountMatch && realAmt > 100) {
+            if (amountMatch && realAmt > 100 && descMatch) {
                 return true;
             }
 

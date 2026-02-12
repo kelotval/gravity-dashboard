@@ -477,6 +477,8 @@ export default function App() {
     const [saveStatus, setSaveStatus] = useState("Saved");
     const [hasLoadedCloud, setHasLoadedCloud] = useState(false);
 
+
+
     useEffect(() => {
         const load = async () => {
             try {
@@ -687,7 +689,16 @@ export default function App() {
 
 
 
-    const [currentTab, setCurrentTab] = React.useState("overview");
+    const [currentTab, setCurrentTab] = React.useState(() => {
+        return localStorage.getItem("er_finance_active_tab") || "overview_v2";
+    });
+
+    // Save tab selection
+    useEffect(() => {
+        if (currentTab) {
+            localStorage.setItem("er_finance_active_tab", currentTab);
+        }
+    }, [currentTab]);
     const [isModalOpen, setIsModalOpen] = React.useState(false);
     const [editingTransaction, setEditingTransaction] = React.useState(null);
     const [searchQuery, setSearchQuery] = React.useState("");
@@ -1036,29 +1047,25 @@ export default function App() {
     // Dev Mode Assertion: Data Consistency Check
     // ---------------------------------------------
     const dataConsistencyCheck = useMemo(() => {
-        // Calculate sum of REAL (non-virtual) transaction spending only
-        // Virtual transactions represent recurring expenses, which are already
-        // included in the ledger's recurringSpend field
-        const realExpensesOnly = activeTransactionsAll
-            .filter(tx => tx.kind === "expense" && !tx.isVirtual)
-            .reduce((sum, tx) => sum + Math.abs(parseAmount(tx.amount)), 0);
+        // Simple comparison:
+        // ledger.totalExpenses should match (activeTransactionsSpending + ledgerDebtPayments)
+        // activeTransactionsSpending already includes deduped virtual/recurring transactions
+        const totalTxSpending = activeTransactionsSpending.reduce((sum, tx) => sum + Math.abs(parseAmount(tx.amount)), 0);
 
         const ledgerExpenses = activeLedgerEntry.totalExpenses;
-        const ledgerRecurring = activeLedgerEntry.recurringSpend;
         const ledgerDebtPayments = activeLedgerEntry.debtPayments || 0;
 
-        // For fair comparison: add recurring and debt payments back to real expenses
-        // because ledger totalExpenses = amexNetSpend + recurringSpend + debtPayments
-        const calculatedTotal = realExpensesOnly + ledgerRecurring + ledgerDebtPayments;
+        // FAIR COMPARISON
+        const calculatedTotal = totalTxSpending + ledgerDebtPayments;
         const delta = Math.abs(calculatedTotal - ledgerExpenses);
 
         return {
             calculatedSpending: calculatedTotal,
             ledgerExpenses,
             delta,
-            hasMismatch: delta > 1  // More than $1 difference
+            hasMismatch: delta > 1
         };
-    }, [activeTransactionsAll, activeLedgerEntry.totalExpenses, activeLedgerEntry.recurringSpend, activeLedgerEntry.debtPayments]);
+    }, [activeTransactionsSpending, activeLedgerEntry.totalExpenses, activeLedgerEntry.debtPayments]);
 
     // Financial Health Calculations
     // Note: Debt Balances and Net Worth are effectively "Snapshot" or "Global"
@@ -1067,6 +1074,27 @@ export default function App() {
     const totalMonthlyDebt = debts.reduce((acc, d) => acc + d.monthlyRepayment, 0);
     const dtiRatio = totalIncome > 0 ? ((totalMonthlyDebt / totalIncome) * 100).toFixed(1) : "0.0";
     const netWorth = (profile.assets || 0) - totalDebtBalance;
+
+    // --- STABLE METRICS STRATEGY ---
+    // If we are looking at the Current Month, use the Previous Month's data for Health Score & Trends
+    // This prevents volatility due to partial month data (e.g. before Amex bill arrives).
+    const isCurrentMonthView = activePeriodKey === new Date().toISOString().substring(0, 7);
+
+    // Helper to get previous month key
+    const getPrevMonthKey = (k) => {
+        const d = new Date(k + "-01");
+        d.setMonth(d.getMonth() - 1);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    };
+
+    const periodForMetrics = isCurrentMonthView ? getPrevMonthKey(activePeriodKey) : activePeriodKey;
+    const stableLedgerEntry = (monthlyLedger || []).find(l => l.monthKey === periodForMetrics) || activeLedgerEntry;
+
+    // Recalculate core metrics based on stable period
+    const stableNetSavings = stableLedgerEntry.netDelta ?? netSavings;
+    const stableTotalIncome = stableLedgerEntry.plannedIncome || totalIncome;
+    const stableSavingsRate = stableTotalIncome > 0 ? ((stableNetSavings / stableTotalIncome) * 100).toFixed(1) : savingsRate;
+    const stableDtiRatio = stableTotalIncome > 0 ? ((totalMonthlyDebt / stableTotalIncome) * 100).toFixed(1) : dtiRatio;
 
     // ---------------------------------------------
     // Advanced Search Filtering
@@ -1150,11 +1178,11 @@ export default function App() {
 
     // Advanced health score algorithm
     const { totalScore: healthScore, breakdown: healthBreakdown } = calculateDetailedHealthScore({
-        savingsRate: parseFloat(savingsRate),
-        dtiRatio: parseFloat(dtiRatio),
+        savingsRate: parseFloat(stableSavingsRate),
+        dtiRatio: parseFloat(stableDtiRatio),
         debts,
-        netSavings,
-        totalIncome
+        netSavings: stableNetSavings,
+        totalIncome: stableTotalIncome
     });
 
     // ---------------------------------------------
@@ -1203,7 +1231,8 @@ export default function App() {
             // This is correct: Expenses (Cash Out) - Principal (Liability Down) = Interest (Expense)
             // Alternatively: NW Change = Income - (Expenses - Principal) - Interest === Income - Interest - (Other Expenses)
             // Simplified: NW Change = Net Savings + PrincipalPaid
-            const monthlyVelocity = netSavings + monthlyPrincipalPaid;
+            // STABILITY FIX: Use stableNetSavings for velocity projection to avoid current-month dips
+            const monthlyVelocity = stableNetSavings + monthlyPrincipalPaid;
 
             // 4. Projections
             const projected6Mo = netWorth + (monthlyVelocity * 6);
@@ -1236,7 +1265,7 @@ export default function App() {
                 monthsToPositive: null
             };
         }
-    }, [netWorth, netSavings, debts, debtRateStateById, profile.assets]);
+    }, [netWorth, stableNetSavings, debts, debtRateStateById, profile.assets]);
 
     // 2. Event Handlers
     const handleSaveTransaction = (txData) => {
@@ -1642,11 +1671,12 @@ export default function App() {
                     healthScore={healthScore}
                     cashflow={netCashflow}
                     incomeExpenseData={incomeExpenseData}
-                    handleNavigate={setCurrentTab}
-                    transactions={transactions}
+                    income={activePlannedIncome}
+                    transactions={activeTransactionsAll}
+                    spending={activeTransactionsSpending}
                     debts={debts}
-                    activeMonth={activePeriodKey}
-                    setActiveMonth={setActivePeriodKey}
+                    activeLedgerEntry={activeLedgerEntry}
+                    month={activePeriodKey}
                     availableMonths={[...new Set(transactions.map(t => getPeriodKey(t)))].filter(Boolean).sort().reverse()} // Pass unique periods
                     monthlyLedger={monthlyLedger}
                     incomeHistory={incomeHistory}

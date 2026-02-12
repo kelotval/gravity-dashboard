@@ -30,9 +30,10 @@ export default function OverviewV2({
     incomeExpenseData, // Array for chart [{name, Income, Expenses}]
     handleNavigate,
     transactions,
+    spending = [],
     debts,
     activeMonth,
-    setActiveMonth,
+    activeLedgerEntry = {},
     availableMonths = [],
     monthlyLedger = [],
     incomeHistory = []
@@ -396,9 +397,9 @@ export default function OverviewV2({
 
                         {/* Largest Expense This Month */}
                         {(() => {
-                            const thisMonthTx = transactions.filter(t => (t.periodKey || t.date?.slice(0, 7)) === activeMonth);
-                            const expenses = thisMonthTx.filter(tx => tx.amount < 0 && tx.kind !== 'transfer');
-                            const largest = expenses.sort((a, b) => a.amount - b.amount)[0];
+                            // Use standardized spending list passed from App
+                            const expenses = spending.filter(tx => tx.kind === 'expense');
+                            const largest = [...expenses].sort((a, b) => a.amount - b.amount)[0];
 
                             return (
                                 <GlassCard className="hover:border-rose-500/30 transition-all cursor-pointer group">
@@ -524,8 +525,8 @@ export default function OverviewV2({
                     <h3 className="text-gray-400 font-bold uppercase text-xs tracking-wider mb-3 sm:mb-4 ml-1 sm:ml-2">Spending by Category</h3>
                     <GlassCard>
                         {(() => {
-                            const thisMonthTx = transactions.filter(t => (t.periodKey || t.date?.slice(0, 7)) === activeMonth);
-                            const expenses = thisMonthTx.filter(tx => tx.amount < 0 && tx.kind !== 'transfer');
+                            // Use standardized spending list passed from App
+                            const expenses = spending.filter(tx => tx.kind === 'expense');
 
                             // Group by category
                             const categoryMap = {};
@@ -534,12 +535,17 @@ export default function OverviewV2({
                                 categoryMap[cat] = (categoryMap[cat] || 0) + Math.abs(tx.amount);
                             });
 
-                            // Sort and get top 6
-                            const sortedCategories = Object.entries(categoryMap)
-                                .sort((a, b) => b[1] - a[1])
-                                .slice(0, 6);
+                            // Add Debt Repayments as a category to match Ledger
+                            const debtSum = activeLedgerData.debtPayments || 0;
+                            if (debtSum > 0) {
+                                categoryMap['Debt Repayment'] = (categoryMap['Debt Repayment'] || 0) + debtSum;
+                            }
 
-                            const totalExpenses = expenses.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+                            // Sort and get top 8
+                            const sortedCategories = Object.entries(categoryMap)
+                                .sort((a, b) => b[1] - a[1]);
+
+                            const totalExpenses = Object.values(categoryMap).reduce((sum, amt) => sum + amt, 0);
 
                             if (sortedCategories.length === 0) {
                                 return (
@@ -560,7 +566,9 @@ export default function OverviewV2({
                                             'bg-pink-500',
                                             'bg-rose-500',
                                             'bg-orange-500',
-                                            'bg-yellow-500'
+                                            'bg-yellow-500',
+                                            'bg-emerald-500',
+                                            'bg-blue-500'
                                         ];
                                         const color = colors[index % colors.length];
 
@@ -589,7 +597,7 @@ export default function OverviewV2({
                                     {/* Total */}
                                     <div className="pt-4 mt-4 border-t border-gray-700/50">
                                         <div className="flex justify-between items-center">
-                                            <span className="text-gray-400 font-bold uppercase text-xs tracking-wider">Total Expenses</span>
+                                            <span className="text-gray-400 font-bold uppercase text-xs tracking-wider">Total Combined Spending</span>
                                             <span className="text-white text-xl font-bold font-mono">${totalExpenses.toLocaleString()}</span>
                                         </div>
                                     </div>

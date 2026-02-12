@@ -78,7 +78,7 @@ export default function WealthTrajectory({ wealthMetrics }) {
                             )}
                         </div>
                         <div className={`text-2xl font-bold ${velocityPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                            {velocityPositive ? '+' : ''}${monthlyVelocity.toLocaleString()}/mo
+                            {velocityPositive ? '+' : ''}${monthlyVelocity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo
                         </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             Net worth change per month
@@ -137,7 +137,7 @@ export default function WealthTrajectory({ wealthMetrics }) {
                                 />
                             </div>
                             <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-2">
-                                At current velocity of ${monthlyVelocity.toLocaleString()}/mo
+                                At current velocity of ${monthlyVelocity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo
                             </p>
                         </div>
                     )}
@@ -192,7 +192,7 @@ export default function WealthTrajectory({ wealthMetrics }) {
                         </LineChart>
                     </ResponsiveContainer>
                     <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
-                        Based on monthly velocity of ${monthlyVelocity.toLocaleString()}/mo
+                        Based on monthly velocity of ${monthlyVelocity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo
                     </p>
                 </div>
             </div>
