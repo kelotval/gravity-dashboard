@@ -1734,7 +1734,7 @@ export default function App() {
                     )}
 
                     <div>
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                        <h2 className="text-2xl font-bold text-white">
                             Welcome back, {profile.householdName}
                         </h2>
                         <p className="text-gray-500 dark:text-gray-400">
@@ -1777,9 +1777,9 @@ export default function App() {
                 />
 
                 {/* Cashflow Settings Toggle */}
-                <div className="mb-4 flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+                <div className="mb-4 flex items-center justify-between bg-surface rounded-lg border border-surface-highlight p-4 shadow-sm">
                     <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <span className="text-sm font-medium text-white">
                             Include Transfers in Spending
                         </span>
                         <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -1900,9 +1900,9 @@ export default function App() {
 
                     {/* Row 2: Active Debts (Half Width) */}
                     <div className="col-span-1 lg:col-span-6 w-full h-auto lg:h-full">
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-full dark:bg-gray-800 dark:border-gray-700 flex flex-col">
+                        <div className="bg-surface rounded-xl shadow-sm border border-surface-highlight p-6 h-full flex flex-col">
                             <div className="flex justify-between items-center mb-4">
-                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Active Debts</h3>
+                                <h3 className="text-lg font-bold text-white">Active Debts</h3>
                                 <button
                                     onClick={() => setCurrentTab("settings")}
                                     className="text-xs font-medium text-blue-600 dark:text-blue-400"
@@ -1917,10 +1917,10 @@ export default function App() {
                                     return (
                                         <div
                                             key={debt.id}
-                                            className="p-4 rounded-lg bg-gray-50 border border-gray-100 dark:bg-gray-700/50 dark:border-gray-700"
+                                            className="p-4 rounded-lg bg-surface-highlight border border-white/10"
                                         >
                                             <div className="flex justify-between items-start mb-2">
-                                                <h4 className="font-semibold text-gray-900 dark:text-white">{debt.name}</h4>
+                                                <div className="text-sm font-semibold text-white">{debt.name}</div>
                                                 <span
                                                     className={`px-2 py-1 text-xs font-semibold rounded ${debt.accent === "red"
                                                         ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"

@@ -54,13 +54,13 @@ export default function SpendingIntelligence({ transactions }) {
     }, [transactions]);
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible lg:overflow-hidden dark:bg-gray-800 dark:border-gray-700 h-auto lg:h-full flex flex-col">
+        <div className="bg-surface rounded-xl shadow-sm border border-surface-highlight overflow-visible lg:overflow-hidden h-auto lg:h-full flex flex-col">
             <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
                 <div className="flex items-center gap-2">
                     <div className="p-2 bg-indigo-50 rounded-lg dark:bg-indigo-900/30">
                         <TrendingUp className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Spending Intelligence</h3>
+                    <h3 className="text-lg font-bold text-white">Spending Intelligence</h3>
                 </div>
                 <button
                     onClick={toggleView}
@@ -89,7 +89,7 @@ export default function SpendingIntelligence({ transactions }) {
                                         <trend.icon className="w-4 h-4" />
                                     </div>
                                     <div>
-                                        <p className="text-sm font-medium text-gray-900 dark:text-white">{trend.category}</p>
+                                        <p className="text-sm font-medium text-white">{trend.category}</p>
                                         <p className={`text-xs font-medium flex items-center ${trend.change > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
                                             {trend.change > 0 ? '+' : ''}{trend.change}%
                                         </p>
@@ -125,41 +125,41 @@ export default function SpendingIntelligence({ transactions }) {
                         initial={{ opacity: 0, width: 0 }}
                         animate={{ opacity: 1, width: "auto" }}
                         exit={{ opacity: 0, width: 0 }}
-                        className="p-6 bg-gray-50/50 dark:bg-gray-800/50 overflow-hidden"
+                        className="p-6 bg-transparent overflow-hidden"
                     >
                         <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400 mb-4">Risk Signals</h4>
                         <div className="space-y-3">
-                            <div className="p-3 bg-white border border-rose-100 rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer dark:bg-gray-800 dark:border-rose-900/30 group">
+                            <div className="p-3 bg-surface-highlight border border-rose-500/20 rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
                                 <div className="flex items-start gap-3">
                                     <div className="p-1.5 bg-rose-100 text-rose-600 rounded-full mt-0.5 dark:bg-rose-900/30 dark:text-rose-400">
                                         <TrendingUp className="w-4 h-4" />
                                     </div>
                                     <div>
-                                        <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-rose-600 transition-colors">Food spending up 12%</p>
+                                        <p className="text-sm font-semibold text-white group-hover:text-rose-400 transition-colors">Food spending up 12%</p>
                                         <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">Higher than 3-month avg. Consider cooking at home.</p>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="p-3 bg-white border border-amber-100 rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer dark:bg-gray-800 dark:border-amber-900/30 group">
+                            <div className="p-3 bg-surface-highlight border border-amber-500/20 rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
                                 <div className="flex items-start gap-3">
                                     <div className="p-1.5 bg-amber-100 text-amber-600 rounded-full mt-0.5 dark:bg-amber-900/30 dark:text-amber-400">
                                         <Monitor className="w-4 h-4" />
                                     </div>
                                     <div>
-                                        <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-amber-600 transition-colors">Subscriptions creeping up</p>
+                                        <p className="text-sm font-semibold text-white group-hover:text-amber-400 transition-colors">Subscriptions creeping up</p>
                                         <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">2 new services added this month.</p>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="p-3 bg-white border border-blue-100 rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer dark:bg-gray-800 dark:border-blue-900/30 group">
+                            <div className="p-3 bg-surface-highlight border border-blue-500/20 rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
                                 <div className="flex items-start gap-3">
                                     <div className="p-1.5 bg-blue-100 text-blue-600 rounded-full mt-0.5 dark:bg-blue-900/30 dark:text-blue-400">
                                         <AlertTriangle className="w-4 h-4" />
                                     </div>
                                     <div>
-                                        <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors">Utility spike detected</p>
+                                        <p className="text-sm font-semibold text-white group-hover:text-blue-400 transition-colors">Utility spike detected</p>
                                         <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">Gas bill is 15% higher than last month.</p>
                                     </div>
                                 </div>
@@ -189,11 +189,11 @@ export default function SpendingIntelligence({ transactions }) {
                                         {React.createElement(CATEGORY_ICONS[tx.category] || ArrowDownRight, { className: "w-4 h-4" })}
                                     </div>
                                     <div className="min-w-0">
-                                        <p className="text-sm font-medium text-gray-900 truncate dark:text-white max-w-[100px]">{tx.item}</p>
+                                        <p className="text-sm font-medium text-white truncate max-w-[100px]">{tx.item}</p>
                                         <p className="text-xs text-gray-500 dark:text-gray-400">{tx.category}</p>
                                     </div>
                                 </div>
-                                <span className="text-sm font-semibold text-gray-900 dark:text-white">${tx.amount.toLocaleString()}</span>
+                                <span className="text-sm font-semibold text-white">${tx.amount.toLocaleString()}</span>
                             </motion.div>
                         ))}
                     </div>

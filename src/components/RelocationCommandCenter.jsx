@@ -12,84 +12,15 @@ export default function RelocationCommandCenter({
     transactions,
     income
 }) {
-    const [editingOfferId, setEditingOfferId] = useState(null);
-    const [draggedOfferId, setDraggedOfferId] = useState(null);
-
+    // State for the active scenario being simulated
     const { offers, assumptions, selectedOfferIds, baselineId, primaryOfferId } = relocation;
+    const [activeScenarioId, setActiveScenarioId] = useState(baselineId);
 
-    // Compute outcomes for all offers
-    const outcomes = useMemo(() => {
-        const baseline = offers.find(o => o.id === baselineId);
-        const results = {};
-
-        offers.forEach(offer => {
-            results[offer.id] = computeRelocationOutcome({
-                offer,
-                baseline,
-                assumptions,
-                debts,
-                transactions
-            });
-        });
-
-        return results;
-    }, [offers, assumptions, baselineId, debts, transactions]);
-
-    // Helper functions
-    const toggleOfferSelection = (offerId) => {
-        const newSelected = selectedOfferIds.includes(offerId)
-            ? selectedOfferIds.filter(id => id !== offerId)
-            : selectedOfferIds.length < 3
-                ? [...selectedOfferIds, offerId]
-                : selectedOfferIds;
-
-        setRelocation({ ...relocation, selectedOfferIds: newSelected });
-    };
-
-    const setBaseline = (offerId) => {
-        setRelocation({ ...relocation, baselineId: offerId });
-    };
-
-    const setPrimaryOffer = (offerId) => {
-        setRelocation({ ...relocation, primaryOfferId: offerId });
-    };
-
-    const deleteOffer = (offerId) => {
-        if (offerId === 'sydney') {
-            alert('Cannot delete Sydney baseline');
-            return;
-        }
-        if (!confirm('Delete this offer?')) return;
-
-        const newOffers = offers.filter(o => o.id !== offerId);
-        const newSelected = selectedOfferIds.filter(id => id !== offerId);
-        setRelocation({
-            ...relocation,
-            offers: newOffers,
-            selectedOfferIds: newSelected,
-            primaryOfferId: primaryOfferId === offerId ? baselineId : primaryOfferId
-        });
-    };
-
-    const duplicateOffer = (offerId) => {
-        const offer = offers.find(o => o.id === offerId);
-        if (!offer) return;
-
-        const variantCount = offers.filter(o => o.name.startsWith(offer.name)).length;
-        const newOffer = {
-            ...offer,
-            id: `${offer.id}_variant_${Date.now()}`,
-            name: `${offer.name} (Variant ${variantCount})`,
-            lastUpdated: new Date().toISOString()
-        };
-
-        setRelocation({ ...relocation, offers: [...offers, newOffer] });
-    };
-
-    const addNewOffer = () => {
+    // CRUD Handlers
+    const handleCreateScenario = () => {
         const newOffer = {
             id: `custom_${Date.now()}`,
-            name: 'New Offer',
+            name: 'New Scenario',
             country: 'Unknown',
             currency: 'AUD',
             netMonthlyPayLocal: 0,
@@ -110,68 +41,87 @@ export default function RelocationCommandCenter({
             lastUpdated: new Date().toISOString()
         };
 
-        setRelocation({ ...relocation, offers: [...offers, newOffer] });
-        setEditingOfferId(newOffer.id);
+        const newSelected = [...selectedOfferIds];
+        if (!newSelected.includes(newOffer.id)) {
+            newSelected.push(newOffer.id);
+        }
+
+        setRelocation({
+            ...relocation,
+            offers: [...offers, newOffer],
+            selectedOfferIds: newSelected
+        });
+        setActiveScenarioId(newOffer.id);
     };
 
-    const handleDragStart = (offerId) => {
-        setDraggedOfferId(offerId);
+    const handleDeleteScenario = (offerId) => {
+        if (offerId === baselineId) {
+            alert('Cannot delete the baseline scenario.');
+            return;
+        }
+        if (!confirm('Are you sure you want to delete this scenario?')) return;
+
+        const newOffers = offers.filter(o => o.id !== offerId);
+        const newSelected = selectedOfferIds.filter(id => id !== offerId);
+
+        let newActiveId = activeScenarioId;
+        if (activeScenarioId === offerId) {
+            newActiveId = baselineId;
+        }
+
+        setRelocation({
+            ...relocation,
+            offers: newOffers,
+            selectedOfferIds: newSelected,
+            primaryOfferId: primaryOfferId === offerId ? baselineId : primaryOfferId
+        });
+        setActiveScenarioId(newActiveId);
     };
 
-    const handleDragOver = (e, targetOfferId) => {
-        e.preventDefault();
-        if (!draggedOfferId || draggedOfferId === targetOfferId) return;
+    const handleDuplicateScenario = (offerId) => {
+        const offer = offers.find(o => o.id === offerId);
+        if (!offer) return;
 
-        const draggedIdx = offers.findIndex(o => o.id === draggedOfferId);
-        const targetIdx = offers.findIndex(o => o.id === targetOfferId);
+        const variantCount = offers.filter(o => o.name.startsWith(offer.name)).length;
+        const newOffer = {
+            ...offer,
+            id: `${offer.id}_copy_${Date.now()}`,
+            name: `${offer.name} (Copy)`,
+            lastUpdated: new Date().toISOString()
+        };
 
-        const newOffers = [...offers];
-        const [removed] = newOffers.splice(draggedIdx, 1);
-        newOffers.splice(targetIdx, 0, removed);
+        const newSelected = [...selectedOfferIds, newOffer.id];
 
-        setRelocation({ ...relocation, offers: newOffers });
+        setRelocation({
+            ...relocation,
+            offers: [...offers, newOffer],
+            selectedOfferIds: newSelected
+        });
+        setActiveScenarioId(newOffer.id);
     };
 
-    const handleDragEnd = () => {
-        setDraggedOfferId(null);
-    };
-
-    const updateOfferField = (offerId, field, value) => {
+    const handleUpdateScenario = (offerId, field, value) => {
         const newOffers = offers.map(o =>
             o.id === offerId ? { ...o, [field]: value, lastUpdated: new Date().toISOString() } : o
         );
         setRelocation({ ...relocation, offers: newOffers });
     };
 
-    const updateAssumption = (field, value) => {
-        setRelocation({
-            ...relocation,
-            assumptions: { ...assumptions, [field]: value }
+    // Calculate outcomes for wealth velocity
+    const outcomes = useMemo(() => {
+        const baseline = offers.find(o => o.id === baselineId);
+        const results = {};
+        offers.forEach(offer => {
+            results[offer.id] = computeRelocationOutcome({
+                offer,
+                baseline,
+                assumptions,
+                debts,
+                transactions
+            });
         });
-    };
-
-    const updateRelocation = (field, value) => {
-        setRelocation({ ...relocation, [field]: value });
-    };
-
-    // Get best offers
-    const bestCashflow = useMemo(() => {
-        return offers.reduce((best, offer) => {
-            const outcome = outcomes[offer.id];
-            const bestOutcome = outcomes[best.id];
-            return outcome.netAfterDebtsAudMonthly > bestOutcome.netAfterDebtsAudMonthly ? offer : best;
-        }, offers[0]);
-    }, [offers, outcomes]);
-
-    const bestQuality = useMemo(() => {
-        return offers.reduce((best, offer) => {
-            const outcome = outcomes[offer.id];
-            const bestOutcome = outcomes[best.id];
-            return outcome.qualityScore > bestOutcome.qualityScore ? offer : best;
-        }, offers[0]);
-    }, [offers, outcomes]);
-
-    const selectedOffers = offers.filter(o => selectedOfferIds.includes(o.id));
+        return results;
+    }, [offers, assumptions, baselineId, debts, transactions]);
 
     return (
         <PageContainer
@@ -181,13 +131,17 @@ export default function RelocationCommandCenter({
         >
             <div className="h-[calc(100vh-200px)] min-h-[800px]">
                 <CareerPathSimulator
-                    relocation={relocation}
-                    updateRelocation={updateRelocation}
-                    selectedOffers={selectedOffers}
+                    offers={offers}
+                    activeScenarioId={activeScenarioId}
+                    setActiveScenarioId={setActiveScenarioId}
                     outcomes={outcomes}
                     assumptions={assumptions}
-                    updateAssumption={updateAssumption}
-                    addNewOffer={addNewOffer}
+                    updateAssumption={(field, val) => setRelocation({ ...relocation, assumptions: { ...assumptions, [field]: val } })}
+                    onUpdateScenario={handleUpdateScenario}
+                    onCreateScenario={handleCreateScenario}
+                    onDeleteScenario={handleDeleteScenario}
+                    onDuplicateScenario={handleDuplicateScenario}
+                    baselineId={baselineId}
                 />
             </div>
         </PageContainer>
@@ -562,7 +516,7 @@ function OfferCard({ offer, outcome, isBaseline, isBestCashflow, isBestQuality, 
             <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <button
                     onClick={() => setShowDetails(!showDetails)}
-                    className="w-full flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition"
+                    className="w-full flex items-center justify-between text-sm font-medium text-gray-300 hover:text-white transition"
                 >
                     <span>Why this {outcome.verdict.label === 'Strong Upgrade' ? 'wins' : 'loses'}</span>
                     <span className={`transform transition-transform ${showDetails ? 'rotate-180' : ''}`}>▼</span>

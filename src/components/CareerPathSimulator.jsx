@@ -1,539 +1,521 @@
 import React, { useState, useMemo } from 'react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    LineChart, Line, Legend, AreaChart, Area
+    AreaChart, Area
 } from 'recharts';
 import {
     Globe, TrendingUp, DollarSign, Target, Zap, Brain,
-    ArrowRight, CheckCircle2, ChevronRight, Settings, AlertTriangle
+    ArrowRight, CheckCircle2, ChevronRight, Settings, AlertTriangle,
+    Plus, Trash2, Copy, Plane, Home, GraduationCap, Building2, Coins, Briefcase, TrendingDown,
+    Rocket, Lock, ShieldCheck, Hourglass, Landmark
 } from 'lucide-react';
 import { AIInsights } from "./RelocationTabs";
 import { SurfaceCard } from "./common/SurfaceCard";
+import { toAud } from "../data/relocationOffers";
 
-// Re-use logic from previous components if needed, or build fresh for the specific "Simulator" view
-// This component aims to be a "Single Pane of Glass" replacing the tabs
+// Internal Component: Scenario Tabs
+const ScenarioTabs = ({ offers, activeScenarioId, onSelect, onCreate, onDelete, baselineId }) => {
+    return (
+        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 custom-scrollbar">
+            {offers.map(offer => {
+                const isActive = offer.id === activeScenarioId;
+                const isBaseline = offer.id === baselineId;
+                return (
+                    <div
+                        key={offer.id}
+                        onClick={() => onSelect(offer.id)}
+                        className={`
+                            relative flex items-center gap-2 px-4 py-2.5 rounded-xl cursor-pointer transition-all whitespace-nowrap border
+                            ${isActive
+                                ? 'bg-white/10 border-white/20 text-white shadow-lg shadow-black/20'
+                                : 'bg-black/20 border-transparent text-gray-400 hover:bg-white/5 hover:text-gray-200'
+                            }
+                        `}
+                    >
+                        <span className="text-lg">{offer.country === 'Australia' ? '🇦🇺' : offer.country === 'United Arab Emirates' ? '🇦🇪' : offer.country === 'Saudi Arabia' ? '🇸🇦' : '🌍'}</span>
+                        <span className={`text-sm font-medium ${isActive ? 'text-white' : 'text-gray-400'}`}>
+                            {offer.name}
+                        </span>
+                        {!isBaseline && isActive && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onDelete(offer.id); }}
+                                className="ml-2 p-1 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-full transition-colors"
+                            >
+                                <Trash2 className="w-3 h-3" />
+                            </button>
+                        )}
+                        {isActive && (
+                            <div className="absolute inset-x-0 -bottom-[11px] h-0.5 bg-gradient-to-r from-transparent via-emerald-500 to-transparent opacity-50" />
+                        )}
+                    </div>
+                );
+            })}
+            <button
+                onClick={onCreate}
+                className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-white/5 bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition-all whitespace-nowrap text-sm font-medium"
+            >
+                <Plus className="w-4 h-4" />
+                New Scenario
+            </button>
+        </div>
+    );
+};
+
+// Internal Component: Input Group
+const InputGroup = ({ label, icon: Icon, children, className, headerColor = "text-gray-400" }) => (
+    <div className={`p-4 bg-black/20 rounded-xl border border-white/5 ${className}`}>
+        <div className={`flex items-center gap-2 mb-3 ${headerColor}`}>
+            {Icon && <Icon className="w-4 h-4" />}
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-400">{label}</span>
+        </div>
+        {children}
+    </div>
+);
+
+// Internal Component: Metric Tile
+const MetricTile = ({ label, value, subtext, trend, trendLabel, color = "emerald" }) => (
+    <div className="flex flex-col">
+        <span className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">{label}</span>
+        <div className="flex items-baseline gap-2">
+            <span className={`text-2xl font-bold ${color === 'emerald' ? 'text-emerald-400' : 'text-white'}`}>
+                {value}
+            </span>
+            {trend && (
+                <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${trend > 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                    {trend > 0 ? '+' : ''}{trend}%
+                </span>
+            )}
+        </div>
+        {subtext && <span className="text-xs text-gray-500 dark:text-gray-500 mt-1">{subtext}</span>}
+    </div>
+);
+
+// Internal Component: AI Wealth Advisor
+const AIAdvisor = ({ outcomes, activeScenarioId, baselineId }) => {
+    const activeOutcome = outcomes[activeScenarioId] || {};
+    const baselineOutcome = outcomes[baselineId] || {};
+    const isBaseline = activeScenarioId === baselineId;
+
+    if (isBaseline) {
+        return (
+            <SurfaceCard className="p-6 relative overflow-hidden group border-blue-500/20">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+                <div className="relative z-10 flex items-start gap-4">
+                    <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400">
+                        <Globe className="w-8 h-8" />
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-bold text-white mb-1">Baseline: Sydney</h3>
+                        <p className="text-sm text-gray-400 mb-3">
+                            This is your reference point. Create or select a new scenario to see how much faster you can build wealth abroad.
+                        </p>
+                        <div className="flex items-center gap-2 text-xs font-bold text-blue-400 uppercase tracking-wider">
+                            <ArrowRight className="w-4 h-4" /> Select a destination
+                        </div>
+                    </div>
+                </div>
+            </SurfaceCard>
+        );
+    }
+
+    // Calculations
+    const activeSavings = activeOutcome.netAfterDebtsAudMonthly || 0;
+    const baselineSavings = baselineOutcome.netAfterDebtsAudMonthly || 0;
+    const delta = activeSavings - baselineSavings;
+    const multiplier = baselineSavings > 0 ? (activeSavings / baselineSavings).toFixed(1) : "∞";
+    const annualExtra = delta * 12;
+
+    // Time to $100k (Micro-FIRE)
+    const monthsTo100kActive = activeSavings > 0 ? 100000 / activeSavings : 999;
+    const monthsTo100kBaseline = baselineSavings > 0 ? 100000 / baselineSavings : 999;
+    const timeSaved = Math.max(0, Math.round(monthsTo100kBaseline - monthsTo100kActive));
+
+    // Tax Efficiency
+    const taxSaved = (baselineOutcome.taxMonthlyAud || 0) - (activeOutcome.taxMonthlyAud || 0);
+
+    return (
+        <SurfaceCard className="p-0 relative overflow-hidden group border-emerald-500/20">
+            {/* Dynamic Background Gradient */}
+            <div className={`absolute inset-0 bg-gradient-to-r ${delta > 0 ? 'from-emerald-900/20 to-black' : 'from-red-900/20 to-black'} opacity-50`} />
+
+            <div className="relative z-10 p-6">
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${delta > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                            <Brain className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-white text-lg">AI Wealth Advisor</h3>
+                            <p className="text-xs text-gray-400 uppercase tracking-wider font-bold">VS SYDNEY BASELINE</p>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <div className={`text-3xl font-bold ${delta > 0 ? 'text-white' : 'text-red-400'}`}>
+                            {delta > 0 ? '+' : ''}{multiplier}x
+                        </div>
+                        <div className="text-xs text-gray-500">Wealth Velocity</div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Insight 1: Wealth Acceleration */}
+                    <div className="bg-black/40 rounded-xl p-3 border border-white/5">
+                        <div className="flex items-center gap-2 mb-2 text-emerald-400">
+                            <Rocket className="w-4 h-4" />
+                            <span className="text-xs font-bold uppercase">Acceleration</span>
+                        </div>
+                        <p className="text-sm text-gray-300 leading-snug">
+                            You are building wealth <span className="text-white font-bold">{multiplier}x faster</span>.
+                            That's an extra <span className="text-emerald-400 font-bold">${Math.round(annualExtra).toLocaleString()}</span> per year.
+                        </p>
+                    </div>
+
+                    {/* Insight 2: Time to Freedom */}
+                    <div className="bg-black/40 rounded-xl p-3 border border-white/5">
+                        <div className="flex items-center gap-2 mb-2 text-blue-400">
+                            <Hourglass className="w-4 h-4" />
+                            <span className="text-xs font-bold uppercase">Time to $100k</span>
+                        </div>
+                        <p className="text-sm text-gray-300 leading-snug">
+                            Reach $100k savings in <span className="text-white font-bold">{Math.round(monthsTo100kActive)} months</span>.
+                            {timeSaved > 0 && <span> You save <span className="text-blue-400 font-bold">{timeSaved} months</span> of working life.</span>}
+                        </p>
+                    </div>
+
+                    {/* Insight 3: Strategic Trade-off */}
+                    <div className="bg-black/40 rounded-xl p-3 border border-white/5">
+                        <div className="flex items-center gap-2 mb-2 text-purple-400">
+                            <Landmark className="w-4 h-4" />
+                            <span className="text-xs font-bold uppercase">Efficiency</span>
+                        </div>
+                        {taxSaved > 0 ? (
+                            <p className="text-sm text-gray-300 leading-snug">
+                                <span className="text-white font-bold">Tax Advantage:</span> You save <span className="text-purple-400 font-bold">${Math.round(taxSaved).toLocaleString()}/mo</span> in taxes vs Sydney.
+                            </p>
+                        ) : (
+                            <p className="text-sm text-gray-300 leading-snug">
+                                <span className="text-white font-bold">Lifestyle Cost:</span> Higher living costs are offset by income gains.
+                            </p>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </SurfaceCard>
+    );
+};
+
 
 export default function CareerPathSimulator({
-    relocation,
-    updateRelocation,
-    selectedOffers,
+    offers,
+    activeScenarioId,
+    setActiveScenarioId,
     outcomes,
     assumptions,
     updateAssumption,
-    addNewOffer
+    onUpdateScenario,
+    onCreateScenario,
+    onDeleteScenario,
+    onDuplicateScenario,
+    baselineId
 }) {
-    // Local state for the simulator specific inputs
-    // In a real app, these might sync back to the main state, but for a "Simulator" 
-    // it's often good to have some ephemeral state for "What-if" analysis
-    const [activeOfferId, setActiveOfferId] = useState(selectedOffers.find(o => o.id !== 'sydney')?.id || selectedOffers[0]?.id);
-    const [showBaselineSettings, setShowBaselineSettings] = useState(true);
+    const activeOffer = offers.find(o => o.id === activeScenarioId) || offers[0];
+    const outcome = outcomes[activeScenarioId] || {};
+    const baselineOutcome = outcomes[baselineId] || {};
+    const isBaseline = activeScenarioId === baselineId;
 
-    // Local overrides for "What-if" analysis without persisting to global state immediately
-    const [simulationOverrides, setSimulationOverrides] = useState({});
+    // Derived metrics
+    const annualSavings = (outcome.netAfterDebtsAudMonthly || 0) * 12;
+    const baselineSavings = (baselineOutcome.netAfterDebtsAudMonthly || 0) * 12;
+    const savingsDelta = annualSavings - baselineSavings;
+    const savingsGrowth = baselineSavings > 0 ? (savingsDelta / baselineSavings) * 100 : 0;
 
-    const handleSimulationChange = (field, value) => {
-        setSimulationOverrides(prev => ({
-            ...prev,
-            [activeOfferId]: {
-                ...prev[activeOfferId],
-                [field]: value
-            }
-        }));
-    };
-
-    const baselineOffer = selectedOffers.find(o => o.id === 'sydney');
-    const originalTargetOffer = selectedOffers.find(o => o.id === activeOfferId);
-
-    // Merge overrides
-    const targetOffer = { ...originalTargetOffer, ...(simulationOverrides[activeOfferId] || {}) };
-
-    const baselineOutcome = outcomes['sydney'] || {};
-    const targetOutcome = outcomes[activeOfferId] || {};
-
-    // Recalculate outcomes locally for the simulator
-    // We start with the original outcome and scale it based on the override salary ratio
-    // This is a UI-only trick to avoid duplicating the entire tax engine here
-    const originalNet = outcomes[activeOfferId]?.netAfterDebtsAudMonthly || 0;
-    const currentSalary = targetOffer.salaryLocal || 0;
-    const originalSalary = originalTargetOffer?.salaryLocal || 1;
-    const salaryRatio = currentSalary / originalSalary;
-
-    // If we have overrides, scale the net result. If no overrides, use original.
-    const simulatedNetMonthly = simulationOverrides[activeOfferId]
-        ? originalNet * salaryRatio
-        : originalNet;
-
-    const baselineWealthVelocity = (baselineOutcome.netAfterDebtsAudMonthly || 0) * 12;
-    const targetWealthVelocity = simulatedNetMonthly * 12;
-    const velocityDelta = targetWealthVelocity - baselineWealthVelocity;
-    const velocityGrowth = baselineWealthVelocity > 0 ? (velocityDelta / baselineWealthVelocity) * 100 : 0;
-
-    // Simulation Data for Charts
-    const generateWealthData = () => {
-        const data = [];
-        let sydneyAccumulated = 0;
-        let targetAccumulated = 0;
-
-        // Simple 5 year projection
-        for (let i = 1; i <= 5; i++) {
-            sydneyAccumulated += baselineWealthVelocity * Math.pow(1.05, i - 1); // 5% compound growth for simplicity
-            targetAccumulated += targetWealthVelocity * Math.pow(1.05, i - 1);
-
-            data.push({
-                year: `Year ${i}`,
-                Sydney: Math.round(sydneyAccumulated),
-                Target: Math.round(targetAccumulated),
-            });
-        }
-        return data;
-    };
-
-    const wealthData = useMemo(() => generateWealthData(), [baselineWealthVelocity, targetWealthVelocity]);
-
+    // Chart Data
     const cashflowData = [
         {
-            name: 'Current (Syd)',
-            Expenses: Math.round(baselineOutcome.totalMonthlyCostAud || 0),
-            Savings: Math.round(baselineOutcome.netAfterDebtsAudMonthly || 0),
+            name: 'Income',
+            value: Math.round(outcome.netMonthlyAud + (outcome.totalBenefitsAudMonthly || 0) + (outcome.partnerIncomeAud || 0)),
+            fill: '#3B82F6' // Blue
         },
         {
-            name: 'Target',
-            Expenses: Math.round(targetOutcome.totalMonthlyCostAud || 0),
-            Savings: Math.round(targetOutcome.netAfterDebtsAudMonthly || 0),
+            name: 'Expenses',
+            value: Math.round(outcome.totalCostsAudMonthly + outcome.debtLoadAudMonthly),
+            fill: '#EF4444' // Red
+        },
+        {
+            name: 'Savings',
+            value: Math.round(outcome.netAfterDebtsAudMonthly),
+            fill: '#10B981' // Green
         }
     ];
 
-    if (!targetOffer || !baselineOffer) return <div>Loading Simulator...</div>;
-
-    const chartTheme = {
-        grid: { stroke: '#374151', strokeDasharray: '3 3' },
-        text: { fill: '#9CA3AF', fontSize: 12 },
-        tooltip: {
-            contentStyle: {
-                backgroundColor: 'rgba(17, 24, 39, 0.9)',
-                borderColor: 'rgba(255, 255, 255, 0.1)',
-                color: '#fff',
-                borderRadius: '0.75rem',
-                backdropFilter: 'blur(10px)'
-            }
+    const generateWealthProjection = () => {
+        const data = [];
+        let accumulated = 0;
+        let baselineAccumulated = 0;
+        for (let i = 0; i <= 5; i++) {
+            data.push({
+                year: `Year ${i}`,
+                Scenario: Math.round(accumulated),
+                Baseline: Math.round(baselineAccumulated)
+            });
+            accumulated += annualSavings * Math.pow(1.05, i + 1); // Simple 5% growth
+            baselineAccumulated += baselineSavings * Math.pow(1.05, i + 1);
         }
+        return data;
     };
+    const wealthData = useMemo(() => generateWealthProjection(), [annualSavings, baselineSavings]);
 
-    if (!targetOffer || !baselineOffer) return <div>Loading Simulator...</div>;
 
-    return (
-        <div className="grid grid-cols-12 gap-6 h-full">
-            {/* LEFT SIDEBAR - CONTROLS */}
-            <div className="col-span-12 lg:col-span-3 space-y-6">
-
-                {/* 1. Location Selector */}
-                <SurfaceCard className="p-5">
-                    <div className="flex items-center gap-2 mb-4 text-blue-400">
-                        <Globe className="w-4 h-4" />
-                        <span className="text-xs font-bold tracking-wider uppercase">Path Selection</span>
+    const renderInputSection = () => (
+        <div className="space-y-4 h-full overflow-y-auto pr-2 custom-scrollbar">
+            {/* 1. Identity */}
+            <InputGroup label="Identity" icon={Globe}>
+                <div className="grid grid-cols-2 gap-3">
+                    <div>
+                        <label className="text-xs text-gray-500 mb-1 block">Scenario Name</label>
+                        <input
+                            type="text"
+                            value={activeOffer.name}
+                            onChange={(e) => onUpdateScenario(activeOffer.id, 'name', e.target.value)}
+                            className="w-full bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-white text-sm focus:ring-2 focus:ring-emerald-500/50 outline-none transition"
+                            disabled={isBaseline}
+                        />
                     </div>
-
-                    <div className="space-y-3">
-                        <div className="p-3 bg-white/5 rounded-xl border border-white/10">
-                            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">From</div>
-                            <div className="flex items-center gap-2 text-white font-medium">
-                                <span>🇦🇺</span> Sydney (Baseline)
-                            </div>
-                        </div>
-
-                        <div className="flex justify-center -my-2 relative z-10">
-                            <div className="bg-blue-600 rounded-full p-1 shadow-lg shadow-blue-500/30">
-                                <ArrowRight className="w-4 h-4 text-white" />
-                            </div>
-                        </div>
-
-                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800/50">
-                            <div className="text-xs text-blue-300 mb-1">To Target</div>
-                            <select
-                                value={activeOfferId}
-                                onChange={(e) => setActiveOfferId(e.target.value)}
-                                className="w-full bg-transparent text-white font-bold border-none focus:ring-0 p-0 cursor-pointer"
-                            >
-                                {selectedOffers.filter(o => o.id !== 'sydney').map(offer => (
-                                    <option key={offer.id} value={offer.id} className="text-gray-900 bg-white dark:bg-gray-900">
-                                        {offer.country === 'United Arab Emirates' ? '🇦🇪' : '🇸🇦'} {offer.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
-                </SurfaceCard>
-
-                {/* 2. Baseline Inputs */}
-                <SurfaceCard className="p-5">
-                    <div className="flex justify-between items-center mb-4">
-                        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                            <Settings className="w-4 h-4" />
-                            <span className="text-xs font-bold tracking-wider uppercase">Current Baseline</span>
-                        </div>
-                        <button
-                            onClick={() => setShowBaselineSettings(!showBaselineSettings)}
-                            className="text-xs text-blue-400 hover:text-blue-300"
+                    <div>
+                        <label className="text-xs text-gray-500 mb-1 block">Country</label>
+                        <select
+                            value={activeOffer.country}
+                            onChange={(e) => onUpdateScenario(activeOffer.id, 'country', e.target.value)}
+                            className="w-full bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-white text-sm focus:ring-2 focus:ring-emerald-500/50 outline-none transition [&>option]:bg-gray-900"
+                            disabled={isBaseline}
                         >
-                            {showBaselineSettings ? 'Hide' : 'Edit'}
-                        </button>
+                            <option value="Australia">Australia</option>
+                            <option value="United Arab Emirates">UAE (Dubai)</option>
+                            <option value="Saudi Arabia">Saudi Arabia</option>
+                            <option value="United States">USA</option>
+                            <option value="United Kingdom">UK</option>
+                            <option value="Singapore">Singapore</option>
+                            <option value="Unknown">Other</option>
+                        </select>
                     </div>
+                </div>
+            </InputGroup>
 
-                    {showBaselineSettings && (
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Annual Base (AUD)</label>
+            {/* 2. Income Lever */}
+            <InputGroup label="Income Lever" icon={Coins} headerColor="text-blue-400">
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <label className="text-xs text-gray-500 mb-1 block">Base Salary (Local)</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-2 text-gray-500 text-xs font-bold">{activeOffer.currency}</span>
+                            <input
+                                type="number"
+                                value={activeOffer.netMonthlyPayLocal || activeOffer.salaryLocal / 12 || 0}
+                                onChange={(e) => onUpdateScenario(activeOffer.id, 'netMonthlyPayLocal', parseFloat(e.target.value) || 0)}
+                                className="w-full bg-black/40 border border-white/5 rounded-lg pl-10 pr-3 py-2 text-white text-sm focus:ring-2 focus:ring-blue-500/50 outline-none transition font-mono"
+                            />
+                        </div>
+                        <p className="text-[10px] text-gray-500 mt-1">
+                            ≈ {Math.round(outcome.netMonthlyAud).toLocaleString()} AUD/mo
+                        </p>
+                    </div>
+                    <div>
+                        <label className="text-xs text-gray-500 mb-1 block">Annual Bonus (Local)</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-2 text-gray-500 text-xs font-bold">{activeOffer.currency}</span>
+                            <input
+                                type="number"
+                                value={activeOffer.annualBonusLocal || 0}
+                                onChange={(e) => onUpdateScenario(activeOffer.id, 'annualBonusLocal', parseFloat(e.target.value) || 0)}
+                                className="w-full bg-black/40 border border-white/5 rounded-lg pl-10 pr-3 py-2 text-white text-sm focus:ring-2 focus:ring-blue-500/50 outline-none transition font-mono"
+                            />
+                        </div>
+                    </div>
+                </div>
+                {/* Benefits Toggles */}
+                <div className="grid grid-cols-2 gap-2">
+                    {[
+                        { id: 'housingIncluded', label: 'Housing Inc.', icon: Home },
+                        { id: 'schoolingIncluded', label: 'Schools Inc.', icon: GraduationCap } // Mock property
+                    ].map(opt => (
+                        <button
+                            key={opt.id}
+                            onClick={() => onUpdateScenario(activeOffer.id, opt.id, !activeOffer[opt.id])}
+                            className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium border transition-all ${activeOffer[opt.id]
+                                ? 'bg-blue-500/20 border-blue-500/50 text-blue-300'
+                                : 'bg-black/40 border-white/5 text-gray-500 hover:bg-white/10'
+                                }`}
+                        >
+                            <opt.icon className="w-3" /> {opt.label}
+                        </button>
+                    ))}
+                </div>
+            </InputGroup>
+
+
+            {/* 3. Cost Of Living Lever */}
+            <InputGroup label="Lifestyle Costs (Local)" icon={Building2} headerColor="text-red-400">
+                <div className="grid grid-cols-2 gap-3">
+                    {!activeOffer.housingIncluded && (
+                        <div>
+                            <label className="text-xs text-gray-500 mb-1 block">Rent / Housing</label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-2 text-gray-500 text-xs font-bold">{activeOffer.currency}</span>
                                 <input
                                     type="number"
-                                    value={baselineOffer.salaryLocal}
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none transition"
-                                    readOnly
+                                    value={activeOffer.housingMonthlyLocal || 0}
+                                    onChange={(e) => onUpdateScenario(activeOffer.id, 'housingMonthlyLocal', parseFloat(e.target.value) || 0)}
+                                    className="w-full bg-black/40 border border-white/5 rounded-lg pl-10 pr-3 py-2 text-white text-sm focus:ring-2 focus:ring-red-500/50 outline-none transition font-mono"
                                 />
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Monthly Rent</label>
-                                    <input
-                                        type="number"
-                                        value={baselineOffer.housingAllowanceLocal || 4000}
-                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none"
-                                        readOnly
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Living Costs</label>
-                                    <input
-                                        type="number"
-                                        value={3500}
-                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none"
-                                        readOnly
-                                    />
-                                </div>
-                            </div>
-                            <div className="pt-2 border-t border-gray-200 dark:border-gray-800">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs text-gray-500 dark:text-gray-400">Net Monthly Cash</span>
-                                    <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">${Math.round(baselineOutcome.netAfterDebtsAudMonthly).toLocaleString()}</span>
-                                </div>
                             </div>
                         </div>
                     )}
-                </SurfaceCard>
-
-                {/* 3. Target Opportunity Inputs */}
-                <SurfaceCard className="p-5 border-l-4 border-l-emerald-500">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-                            <Target className="w-4 h-4" />
-                            <span className="text-xs font-bold tracking-wider uppercase">Target Opportunity</span>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                            {/* Path Selector / New Scenario */}
-                            <select
-                                value={activeOfferId}
-                                onChange={(e) => {
-                                    if (e.target.value === 'NEW') {
-                                        addNewOffer();
-                                    } else {
-                                        setActiveOfferId(e.target.value);
-                                    }
-                                }}
-                                className="bg-gray-100 dark:bg-white/10 text-white text-xs px-2 py-1 rounded border border-gray-200 dark:border-white/10 outline-none focus:border-emerald-500"
-                            >
-                                {selectedOffers.filter(o => o.id !== 'sydney').map(o => (
-                                    <option key={o.id} value={o.id} className="text-gray-900 bg-white dark:bg-gray-900">{o.name}</option>
-                                ))}
-                                <option value="NEW" className="text-gray-900 bg-white dark:bg-gray-900">+ New Scenario</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="space-y-6">
-                        {/* Offer Stage Toggle */}
-                        <div className="bg-gray-100 dark:bg-white/5 p-1 rounded-lg grid grid-cols-3 gap-1">
-                            {['Low', 'Mid', 'High'].map((stage) => {
-                                const multipliers = { 'Low': 0.9, 'Mid': 1.0, 'High': 1.15 };
-                                const isSelected = Math.abs((targetOffer.salaryLocal / (originalTargetOffer?.salaryLocal || 1)) - multipliers[stage]) < 0.05;
-
-                                return (
-                                    <button
-                                        key={stage}
-                                        onClick={() => handleSimulationChange('salaryLocal', (originalTargetOffer?.salaryLocal || 0) * multipliers[stage])}
-                                        className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${isSelected
-                                            ? 'bg-emerald-600 text-white shadow-lg'
-                                            : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-white/10'
-                                            }`}
-                                    >
-                                        {stage}
-                                    </button>
-                                );
-                            })}
-                        </div>
-
-                        {/* Slider for Cash Offer */}
-                        <div>
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="text-xs text-gray-500 dark:text-gray-400">Monthly Cash Offer (AUD Eq)</span>
-                                <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">${Math.round(simulatedNetMonthly).toLocaleString()} / mo</span>
-                            </div>
+                    <div>
+                        <label className="text-xs text-gray-500 mb-1 block">General Living</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-2 text-gray-500 text-xs font-bold">{activeOffer.currency}</span>
                             <input
-                                type="range"
-                                className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-                                min={Math.round((outcomes[activeOfferId]?.netAfterDebtsAudMonthly || 0) * 0.4)}
-                                max={Math.round((outcomes[activeOfferId]?.netAfterDebtsAudMonthly || 0) * 2.0)}
-                                value={Math.round(simulatedNetMonthly)}
-                                onChange={(e) => {
-                                    const newNet = parseFloat(e.target.value);
-                                    const currentNet = outcomes[activeOfferId]?.netAfterDebtsAudMonthly || 1;
-                                    const ratio = newNet / currentNet;
-                                    handleSimulationChange('salaryLocal', (originalTargetOffer.salaryLocal || 0) * ratio);
-                                }}
+                                type="number"
+                                value={activeOffer.utilitiesMonthlyLocal || 2000} // Mock general field
+                                onChange={(e) => onUpdateScenario(activeOffer.id, 'utilitiesMonthlyLocal', parseFloat(e.target.value) || 0)}
+                                className="w-full bg-black/40 border border-white/5 rounded-lg pl-10 pr-3 py-2 text-white text-sm focus:ring-2 focus:ring-red-500/50 outline-none transition font-mono"
                             />
-                            <div className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400 mt-1">
-                                <span>Low End</span>
-                                <span>High End</span>
-                            </div>
-                        </div>
-
-                        {/* Package Add-ons Toggles */}
-                        <div className="space-y-3">
-                            <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Package Add-ons</div>
-                            {[
-                                { label: 'Housing Allowance', field: 'housingIncluded', icon: '🏠' },
-                                { label: 'Education Support', field: 'educationIncluded', icon: '🎓' },
-                                { label: 'Annual Flights', field: 'flightsIncluded', icon: '✈️' }
-                            ].map((addon, idx) => {
-                                const isActive = targetOffer[addon.field] === true;
-                                return (
-                                    <div key={idx} className="flex justify-between items-center group cursor-pointer" onClick={() => handleSimulationChange(addon.field, !isActive)}>
-                                        <span className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
-                                            <span className="opacity-50">{addon.icon}</span>
-                                            {addon.label}
-                                        </span>
-                                        <div
-                                            className={`w-10 h-5 rounded-full relative transition-colors ${isActive ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-700'}`}
-                                        >
-                                            <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all shadow-sm ${isActive ? 'left-6' : 'left-1'}`} />
-                                        </div>
-                                    </div>
-                                );
-                            })}
                         </div>
                     </div>
-                </SurfaceCard>
+                </div>
+            </InputGroup>
+        </div>
+    );
 
-            </div>
+    return (
+        <div className="h-full flex flex-col">
+            {/* 1. SCENARIO TABS */}
+            <ScenarioTabs
+                offers={offers}
+                activeScenarioId={activeScenarioId}
+                onSelect={setActiveScenarioId}
+                onCreate={onCreateScenario}
+                onDelete={onDeleteScenario}
+                baselineId={baselineId}
+            />
 
-            {/* MAIN DASHBOARD - VISUALIZATIONS */}
-            <div className="col-span-12 lg:col-span-9 space-y-6">
+            {/* 2. MAIN DASHBOARD GRID */}
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0">
 
-                {/* AI STRATEGY ADVISOR */}
-                <div className="mb-6">
-                    <AIInsights
-                        selectedOffers={[baselineOffer, targetOffer]}
-                        outcomes={{
-                            ...outcomes,
-                            [targetOffer.id]: {
-                                ...outcomes[targetOffer.id],
-                                netAfterDebtsAudMonthly: simulatedNetMonthly,
-                                qualityScore: outcomes[targetOffer.id]?.qualityScore || 85 // Mock score
-                            }
-                        }}
-                        assumptions={assumptions}
-                        baselineId={'sydney'}
-                    />
+                {/* LEFT: INPUTS (The Levers) */}
+                <div className="lg:col-span-4 h-full flex flex-col gap-4">
+                    <SurfaceCard className="flex-1 p-5 overflow-hidden flex flex-col">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-white font-bold flex items-center gap-2">
+                                <Settings className="w-4 h-4 text-emerald-500" />
+                                Configuration
+                            </h3>
+                            <button
+                                onClick={() => onDuplicateScenario(activeScenarioId)}
+                                className="text-xs text-gray-500 hover:text-white flex items-center gap-1 transition-colors"
+                            >
+                                <Copy className="w-3 h-3" /> Duplicate
+                            </button>
+                        </div>
+                        {renderInputSection()}
+                    </SurfaceCard>
                 </div>
 
-                {/* 1. WEALTH VELOCITY HEADER */}
-                <SurfaceCard className="p-6 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+                {/* RIGHT: OUTPUTS (The Results) */}
+                <div className="lg:col-span-8 h-full flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar">
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
-                        <div>
-                            <div className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Projected Annual Wealth Velocity</div>
-                            <div className="flex items-baseline gap-4">
-                                <h1 className="text-5xl sm:text-6xl font-bold text-white tracking-tight">
-                                    ${Math.round(targetWealthVelocity).toLocaleString()}
-                                </h1>
-                                <div className="bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1">
-                                    <TrendingUp className="w-3 h-3" />
-                                    +{velocityGrowth.toFixed(1)}% vs Syd
-                                </div>
-                            </div>
-                            <div className="text-gray-500 dark:text-gray-400 text-sm mt-2 max-w-md">
-                                This represents your pure savings potential after all living costs, rent, and tax. This is your "freedom fund" accumulation speed.
-                            </div>
-                        </div>
+                    {/* A. HERO METRICS & AI ADVISOR */}
+                    <div className="flex flex-col gap-4">
+                        <AIAdvisor outcomes={outcomes} activeScenarioId={activeScenarioId} baselineId={baselineId} />
+                    </div>
 
-                        <div className="space-y-4">
-                            <div className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">Benchmark Status (USD)</div>
-                            {[
-                                { label: 'Floor ($180k Net Eq)', percent: 100, color: 'bg-emerald-500' },
-                                { label: 'Target ($200k Net Eq)', percent: 95, color: 'bg-emerald-500' },
-                                { label: 'Ideal ($250k Net Eq)', percent: 76, color: 'bg-blue-500' }
-                            ].map((bm, i) => (
-                                <div key={i}>
-                                    <div className="flex justify-between text-xs text-gray-600 dark:text-gray-300 mb-1">
-                                        <span>{bm.label}</span>
-                                        <span>{bm.percent}%</span>
-                                    </div>
-                                    <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                        <div
-                                            className={`h-full ${bm.color} transition-all duration-1000 ease-out`}
-                                            style={{ width: `${bm.percent}%` }}
+                    {/* B. CHARTS ROW */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-64">
+                        <SurfaceCard className="p-4 flex flex-col">
+                            <h4 className="text-xs font-bold text-gray-500 uppercase mb-4">Monthly Cashflow (AUD)</h4>
+                            <div className="flex-1 w-full min-h-0">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={cashflowData} layout="vertical" barSize={24} margin={{ left: 20 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
+                                        <XAxis type="number" hide />
+                                        <YAxis type="category" dataKey="name" stroke="#6B7280" fontSize={10} width={60} tickLine={false} axisLine={false} />
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: '#111827', borderColor: '#374151', borderRadius: '8px' }}
+                                            itemStyle={{ color: '#fff' }}
+                                            cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                         />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                        <Bar dataKey="value" radius={[0, 4, 4, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </SurfaceCard>
+
+                        <SurfaceCard className="p-4 flex flex-col">
+                            <h4 className="text-xs font-bold text-gray-500 uppercase mb-4">5-Year Wealth Trajectory</h4>
+                            <div className="flex-1 w-full min-h-0">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={wealthData} margin={{ left: -20, right: 0, bottom: 0 }}>
+                                        <defs>
+                                            <linearGradient id="gradientScenario" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                                        <XAxis dataKey="year" stroke="#6B7280" fontSize={10} tickLine={false} axisLine={false} />
+                                        <YAxis stroke="#6B7280" fontSize={10} tickFormatter={val => `$${val / 1000}k`} tickLine={false} axisLine={false} />
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: '#111827', borderColor: '#374151', borderRadius: '8px' }}
+                                            formatter={(val) => `$${val.toLocaleString()}`}
+                                        />
+                                        <Area type="monotone" dataKey="Scenario" stroke="#10B981" strokeWidth={2} fill="url(#gradientScenario)" />
+                                        <Area type="monotone" dataKey="Baseline" stroke="#6B7280" strokeWidth={2} strokeDasharray="4 4" fill="transparent" />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </SurfaceCard>
                     </div>
-                </SurfaceCard>
 
-                {/* 2. CHARTS ROW */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Monthly Cashflow Breakdown */}
-                    <SurfaceCard className="p-6">
-                        <div className="flex items-center gap-2 mb-6">
-                            <BarChart3 className="w-5 h-5 text-blue-500" />
-                            <h3 className="text-white font-bold">Monthly Cashflow Breakdown (AUD)</h3>
+                    {/* C. FINANCIAL BREAKDOWN TABLE */}
+                    <SurfaceCard className="overflow-hidden">
+                        <div className="p-4 border-b border-white/5 bg-white/5 flex justify-between items-center">
+                            <h4 className="text-sm font-bold text-white">Financial Breakdown</h4>
+                            <span className="text-xs text-gray-500">*Values in AUD/mo</span>
                         </div>
-                        <div className="h-64">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={cashflowData} layout="vertical" barSize={30}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid.stroke} horizontal={false} />
-                                    <XAxis type="number" stroke={chartTheme.text.fill} fontSize={12} tickFormatter={val => `$${val / 1000}k`} />
-                                    <YAxis type="category" dataKey="name" stroke={chartTheme.text.fill} fontSize={12} width={100} />
-                                    <Tooltip
-                                        contentStyle={chartTheme.tooltip.contentStyle}
-                                        itemStyle={{ color: '#fff' }}
-                                        formatter={(val) => `$${val.toLocaleString()}`}
-                                    />
-                                    <Legend />
-                                    <Bar dataKey="Expenses" stackId="a" fill="#EF4444" radius={[0, 0, 0, 0]} />
-                                    <Bar dataKey="Savings" stackId="a" fill="#10B981" radius={[0, 4, 4, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </SurfaceCard>
-
-                    {/* 5-Year Wealth Accumulation */}
-                    <SurfaceCard className="p-6">
-                        <div className="flex items-center gap-2 mb-6">
-                            <TrendingUp className="w-5 h-5 text-emerald-500" />
-                            <h3 className="text-white font-bold">5-Year Wealth Accumulation</h3>
-                        </div>
-                        <div className="h-64">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={wealthData}>
-                                    <defs>
-                                        <linearGradient id="colorTarget" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                                        </linearGradient>
-                                        <linearGradient id="colorSyd" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid.stroke} vertical={false} />
-                                    <XAxis dataKey="year" stroke={chartTheme.text.fill} fontSize={12} />
-                                    <YAxis stroke={chartTheme.text.fill} fontSize={12} tickFormatter={val => `$${val / 1000}k`} />
-                                    <Tooltip
-                                        contentStyle={chartTheme.tooltip.contentStyle}
-                                        formatter={(val) => `$${val.toLocaleString()}`}
-                                    />
-                                    <Area type="monotone" dataKey="Target" stroke="#10B981" fillOpacity={1} fill="url(#colorTarget)" strokeWidth={3} />
-                                    <Area type="monotone" dataKey="Sydney" stroke="#3B82F6" fillOpacity={1} fill="url(#colorSyd)" strokeWidth={3} />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </SurfaceCard>
-                </div>
-
-                {/* 3. DETAILED BREAKDOWN TABLE */}
-                <SurfaceCard className="overflow-hidden p-0">
-                    <div className="p-6 border-b border-gray-200 dark:border-white/10 flex justify-between items-center">
-                        <h3 className="text-white font-bold">Detailed Financial Breakdown</h3>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">*All figures in AUD Equivalent</div>
-                    </div>
-                    <div className="w-full overflow-x-auto">
                         <table className="w-full text-sm text-left">
-                            <thead className="bg-white/5 text-gray-400 font-medium uppercase text-xs">
+                            <thead className="bg-black/20 text-gray-500 text-xs uppercase font-medium">
                                 <tr>
-                                    <th className="px-6 py-4">Component</th>
-                                    <th className="px-6 py-4">Current (Sydney)</th>
-                                    <th className="px-6 py-4 text-emerald-600 dark:text-emerald-400">Target ({targetOffer.name})</th>
-                                    <th className="px-6 py-4">Variance</th>
+                                    <th className="px-4 py-3">Component</th>
+                                    <th className="px-4 py-3 text-right">Baseline</th>
+                                    <th className="px-4 py-3 text-right text-emerald-400">Target</th>
+                                    <th className="px-4 py-3 text-right">Variance</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-200 dark:divide-white/5 text-gray-700 dark:text-gray-300">
-                                <tr className="hover:bg-gray-50 dark:hover:bg-white/5 transition">
-                                    <td className="px-6 py-4 font-medium">Gross Annual Income</td>
-                                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400">${Math.round(baselineOffer.salaryLocal + (baselineOffer.bonusLocal || 0)).toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-emerald-600 dark:text-emerald-400 font-bold">${Math.round(targetOffer.salaryLocal + (targetOffer.bonusLocal || 0) + (targetOffer.housingAllowanceLocal || 0) * 12).toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-emerald-600 dark:text-emerald-400">
-                                        +${Math.round((targetOffer.salaryLocal + (targetOffer.bonusLocal || 0) + (targetOffer.housingAllowanceLocal || 0) * 12) - (baselineOffer.salaryLocal + (baselineOffer.bonusLocal || 0))).toLocaleString()}
-                                    </td>
+                            <tbody className="divide-y divide-white/5 text-gray-300">
+                                <tr>
+                                    <td className="px-4 py-3">Gross Income</td>
+                                    <td className="px-4 py-3 text-right font-mono text-xs text-gray-500">${Math.round(baselineOutcome.netMonthlyAud + (baselineOutcome.totalBenefitsAudMonthly || 0)).toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-right font-mono text-xs text-white">${Math.round(outcome.netMonthlyAud + (outcome.totalBenefitsAudMonthly || 0)).toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-right font-mono text-xs text-emerald-500">+${Math.round((outcome.netMonthlyAud + (outcome.totalBenefitsAudMonthly || 0)) - (baselineOutcome.netMonthlyAud + (baselineOutcome.totalBenefitsAudMonthly || 0))).toLocaleString()}</td>
                                 </tr>
-                                <tr className="hover:bg-gray-50 dark:hover:bg-white/5 transition">
-                                    <td className="px-6 py-4 font-medium">Estimated Tax</td>
-                                    <td className="px-6 py-4 text-red-500 dark:text-red-400">-${Math.round((baselineOutcome.netMonthlyPayAud - (baselineOffer.salaryLocal / 12)) * 12 * -1).toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-emerald-600 dark:text-emerald-400">0 (Tax Free)</td>
-                                    <td className="px-6 py-4 text-emerald-600 dark:text-emerald-400">
-                                        +${Math.round((baselineOutcome.netMonthlyPayAud - (baselineOffer.salaryLocal / 12)) * 12 * -1).toLocaleString()}
-                                    </td>
+                                <tr>
+                                    <td className="px-4 py-3">Living Costs</td>
+                                    <td className="px-4 py-3 text-right font-mono text-xs text-gray-500">${Math.round(baselineOutcome.totalCostsAudMonthly).toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-right font-mono text-xs text-white">${Math.round(outcome.totalCostsAudMonthly).toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-right font-mono text-xs text-red-400">-${Math.round(outcome.totalCostsAudMonthly - baselineOutcome.totalCostsAudMonthly).toLocaleString()}</td>
                                 </tr>
-                                <tr className="hover:bg-gray-50 dark:hover:bg-white/5 transition bg-emerald-50/50 dark:bg-emerald-900/10">
-                                    <td className="px-6 py-4 font-bold text-white">Net Monthly Cash</td>
-                                    <td className="px-6 py-4 text-white font-bold">${Math.round(baselineOutcome.netAfterDebtsAudMonthly + (baselineOutcome.totalMonthlyCostAud)).toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-emerald-600 dark:text-emerald-400 font-bold text-lg">${Math.round(targetOutcome.netAfterDebtsAudMonthly + (targetOutcome.totalMonthlyCostAud)).toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-emerald-600 dark:text-emerald-400 font-bold">
-                                        +${Math.round((targetOutcome.netAfterDebtsAudMonthly + targetOutcome.totalMonthlyCostAud) - (baselineOutcome.netAfterDebtsAudMonthly + baselineOutcome.totalMonthlyCostAud)).toLocaleString()}
-                                    </td>
-                                </tr>
-                                <tr className="hover:bg-gray-50 dark:hover:bg-white/5 transition">
-                                    <td className="px-6 py-4 font-medium">Est. Living Costs</td>
-                                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400">${Math.round(baselineOutcome.totalMonthlyCostAud).toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400">${Math.round(targetOutcome.totalMonthlyCostAud).toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-emerald-600 dark:text-emerald-400">-${Math.round(baselineOutcome.totalMonthlyCostAud - targetOutcome.totalMonthlyCostAud).toLocaleString()}</td>
-                                </tr>
-                                <tr className="bg-white/5">
-                                    <td className="px-6 py-4 font-bold text-lg text-emerald-600 dark:text-emerald-400">Annual Savings Potential</td>
-                                    <td className="px-6 py-4 font-bold text-blue-400 text-lg">${Math.round(baselineWealthVelocity).toLocaleString()}</td>
-                                    <td className="px-6 py-4 font-bold text-emerald-600 dark:text-emerald-400 text-2xl shadow-glow">${Math.round(targetWealthVelocity).toLocaleString()}</td>
-                                    <td className="px-6 py-4 font-bold text-white text-lg">
-                                        +${Math.round(velocityDelta).toLocaleString()}
-                                    </td>
+                                <tr className="bg-white/5 font-bold">
+                                    <td className="px-4 py-3 text-white">Net Monthly Cash</td>
+                                    <td className="px-4 py-3 text-right font-mono text-emerald-600/70">${Math.round(baselineOutcome.netAfterDebtsAudMonthly).toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-right font-mono text-emerald-400">${Math.round(outcome.netAfterDebtsAudMonthly).toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-right font-mono text-emerald-500">+${Math.round(outcome.netAfterDebtsAudMonthly - baselineOutcome.netAfterDebtsAudMonthly).toLocaleString()}</td>
                                 </tr>
                             </tbody>
                         </table>
-                    </div>
-                </SurfaceCard>
+                    </SurfaceCard>
 
+                </div>
             </div>
         </div>
     );
-}
-
-function BarChart3(props) {
-    return (
-        <svg
-            {...props}
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <path d="M3 3v18h18" />
-            <path d="M18 17V9" />
-            <path d="M13 17V5" />
-            <path d="M8 17v-3" />
-        </svg>
-    )
 }

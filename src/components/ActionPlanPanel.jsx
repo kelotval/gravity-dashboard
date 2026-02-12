@@ -170,7 +170,7 @@ export default function ActionPlanPanel({ transactions, income, debts, month = n
     const currentMonth = monthNames[new Date().getMonth()];
 
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8 dark:bg-gray-800 dark:border-gray-700">
+        <div className="bg-surface rounded-2xl shadow-sm border border-surface-highlight p-6 mb-8">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
@@ -178,7 +178,7 @@ export default function ActionPlanPanel({ transactions, income, debts, month = n
                         <Calendar className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                     </div>
                     <div>
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                        <h3 className="text-xl font-bold text-white">
                             Next 30 Days Action Plan
                         </h3>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -199,7 +199,7 @@ export default function ActionPlanPanel({ transactions, income, debts, month = n
                         className="flex items-start gap-4 p-4 rounded-xl border border-gray-100 hover:shadow-md transition-shadow bg-gray-50/50 dark:bg-gray-700/30 dark:border-gray-700"
                     >
                         {/* Number Badge */}
-                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 flex items-center justify-center font-bold text-gray-700 dark:text-gray-300">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center font-bold text-white">
                             {index + 1}
                         </div>
 
@@ -218,7 +218,7 @@ export default function ActionPlanPanel({ transactions, income, debts, month = n
                             </div>
 
                             {/* Action Description */}
-                            <p className="font-semibold text-gray-900 dark:text-white mb-2">
+                            <p className="font-semibold text-white mb-2">
                                 {action.action}
                             </p>
 

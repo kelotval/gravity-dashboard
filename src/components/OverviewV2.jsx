@@ -155,7 +155,7 @@ const PriorityAction = () => (
                 <h4 className="text-sm font-semibold text-white mb-0.5">Payment Due Soon</h4>
                 <p className="text-xs text-gray-400 truncate">Amex ending in 1002 • $4,200</p>
             </div>
-            <button className="flex-shrink-0 px-3 py-1.5 text-xs font-medium bg-white text-black rounded-lg hover:bg-gray-200 transition-colors">
+            <button className="flex-shrink-0 px-3 py-1.5 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
                 Pay Now
             </button>
         </div>

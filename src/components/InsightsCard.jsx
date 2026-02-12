@@ -136,13 +136,13 @@ export default function InsightsCard({ transactions, income, plannedIncome, debt
     }, [transactions, income, debts, savingsRate]);
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-full flex flex-col justify-between dark:bg-gray-800 dark:border-gray-700">
+        <div className="bg-surface rounded-xl shadow-sm border border-surface-highlight p-6 h-full flex flex-col justify-between">
             <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-2">
-                    <div className="p-2 bg-indigo-50 rounded-lg dark:bg-indigo-900/30">
+                    <div className="p-2 bg-indigo-500/20 rounded-lg">
                         <Lightbulb className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Insights & Next Actions</h3>
+                    <h3 className="text-lg font-bold text-white">Insights & Next Actions</h3>
                 </div>
             </div>
 
@@ -156,7 +156,7 @@ export default function InsightsCard({ transactions, income, plannedIncome, debt
                         transition={{ delay: index * 0.1 }}
                         key={index}
                         onClick={() => onAction && onAction(insight.actionType)}
-                        className="w-full text-left group p-4 rounded-xl border border-gray-100 bg-white hover:shadow-md transition-all duration-200 dark:bg-gray-700/30 dark:border-gray-700 cursor-pointer"
+                        className="w-full text-left group p-4 rounded-xl border border-white/10 bg-surface-highlight hover:shadow-md transition-all duration-200 cursor-pointer"
                     >
                         <div className="flex gap-4">
                             <div className={`p-2 rounded-lg h-fit ${insight.color}`}>
@@ -164,13 +164,13 @@ export default function InsightsCard({ transactions, income, plannedIncome, debt
                             </div>
                             <div className="flex-1 space-y-2">
                                 {/* Observation */}
-                                <h4 className="font-semibold text-gray-900 text-sm dark:text-white">
+                                <h4 className="font-semibold text-white text-sm">
                                     {insight.observation}
                                 </h4>
 
                                 {/* Action */}
-                                <div className="bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1.5 rounded border border-indigo-100 dark:border-indigo-800">
-                                    <p className="text-xs font-semibold text-indigo-900 dark:text-indigo-200">
+                                <div className="bg-indigo-500/10 px-2 py-1.5 rounded border border-indigo-500/20">
+                                    <p className="text-xs font-semibold text-indigo-300">
                                         → {insight.action}
                                     </p>
                                 </div>
@@ -192,7 +192,7 @@ export default function InsightsCard({ transactions, income, plannedIncome, debt
 
             <button
                 onClick={() => onAction && onAction({ type: 'NAVIGATE', target: 'insights' })}
-                className="w-full mt-6 py-3 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                className="w-full mt-6 py-3 border border-white/10 rounded-lg text-sm font-medium text-gray-400 hover:bg-white/5 hover:text-white transition-colors"
             >
                 View Full Analysis
             </button>

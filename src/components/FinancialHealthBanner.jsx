@@ -38,7 +38,7 @@ export default function FinancialHealthBanner({ score, breakdown, savingsRate, d
     return (
         <div className="relative w-full rounded-2xl overflow-hidden shadow-lg mb-8 group transition-all duration-500">
             {/* Background Gradient & Glassmorphism */}
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-700 via-indigo-600 to-purple-700 opacity-90"></div>
+            <div className="absolute inset-0 bg-surface"></div>
             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150"></div>
             <div className="absolute inset-0 backdrop-blur-3xl"></div>
 
@@ -51,7 +51,7 @@ export default function FinancialHealthBanner({ score, breakdown, savingsRate, d
                             <span className="text-sm font-medium tracking-wide uppercase">Financial Wellness</span>
                         </div>
                         <h2 className="text-3xl font-bold mb-2">Overall Health Score</h2>
-                        <p className="text-blue-100 max-w-sm text-sm leading-relaxed mb-4">
+                        <p className="text-gray-400 max-w-sm text-sm leading-relaxed mb-4">
                             Based on your savings rate ({savingsRate}%) and debt-to-income ratio ({dtiRatio}%).
                             Keep your DTI below 35% and savings above 20% for optimal health.
                         </p>
@@ -208,7 +208,7 @@ export default function FinancialHealthBanner({ score, breakdown, savingsRate, d
                     <div className="flex-1 text-center md:text-right hidden md:block">
                         <div className="inline-block bg-white/5 rounded-2xl p-6 border border-white/10 shadow-inner backdrop-blur-md min-w-[240px]">
                             <div className="flex justify-between items-center mb-1 gap-4">
-                                <div className="text-sm text-blue-200 font-medium uppercase tracking-wide">Net Worth</div>
+                                <div className="text-sm text-gray-400 font-medium uppercase tracking-wide">Net Worth</div>
                                 {netWorthData.monthlyVelocity > 0 ? (
                                     <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1">
                                         <TrendingUp className="w-3 h-3" /> +${Math.round(netWorthData.monthlyVelocity).toLocaleString()}/mo

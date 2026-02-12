@@ -40,7 +40,7 @@ export default function MetricCard({ title, value, icon: Icon, trend, trendValue
 
     return (
         <motion.div
-            className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700 cursor-default"
+            className="bg-surface rounded-xl p-6 shadow-sm border border-surface-highlight cursor-default"
             whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -49,11 +49,11 @@ export default function MetricCard({ title, value, icon: Icon, trend, trendValue
             <div className="flex items-start justify-between">
                 <div>
                     <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p>
-                    <h3 className="text-2xl font-bold text-gray-900 mt-2 dark:text-white">
+                    <h3 className="text-2xl font-bold text-white mt-2">
                         <AnimatedNumber value={value} />
                     </h3>
                 </div>
-                <div className={clsx("p-3 rounded-lg", colorStyles[color])}>
+                <div className={clsx("p-3 rounded-lg bg-white text-gray-900")}>
                     <Icon className="w-6 h-6" />
                 </div>
             </div>

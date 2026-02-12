@@ -279,7 +279,7 @@ export default function ActiveLiabilities({ debts, onUpdateDebts, advancedSettin
                                             <span className="font-semibold text-white">${debt.currentBalance.toLocaleString()}</span>
                                         </div>
 
-                                        <div className="bg-gray-50 dark:bg-white/5 p-3 rounded-lg border border-gray-200 dark:border-white/5 space-y-2">
+                                        <div className="bg-transparent p-3 rounded-lg border border-white/10 space-y-2">
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-gray-600 dark:text-gray-400">Payment</span>
                                                 <span className="font-bold text-white">${debt.monthlyRepayment.toLocaleString()}</span>
@@ -337,7 +337,7 @@ export default function ActiveLiabilities({ debts, onUpdateDebts, advancedSettin
             {/* Vehicle Section */}
             <h3 className="text-xl font-bold text-white pl-1">Vehicle Assets</h3>
             <GlassCard className="!p-0 overflow-hidden grid grid-cols-1 lg:grid-cols-3">
-                <div className="lg:col-span-1 bg-gray-100 dark:bg-gray-800 relative h-64 lg:h-auto">
+                <div className="lg:col-span-1 bg-surface relative h-64 lg:h-auto">
                     <img
                         src={kiaImage}
                         alt="Kia Sportage"

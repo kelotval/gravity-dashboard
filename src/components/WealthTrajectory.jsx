@@ -41,13 +41,13 @@ export default function WealthTrajectory({ wealthMetrics }) {
     const velocityPositive = monthlyVelocity > 0;
 
     return (
-        <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-800 dark:via-gray-800 dark:to-gray-800 rounded-3xl shadow-lg border border-indigo-100 dark:border-gray-700 p-6 mb-6">
+        <div className="bg-surface rounded-3xl shadow-lg border border-surface-highlight p-6 mb-6">
             <div className="flex items-center gap-3 mb-6">
                 <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg">
                     <Target className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Wealth Trajectory</h2>
+                    <h2 className="text-2xl font-bold text-white">Wealth Trajectory</h2>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Your financial path forward</p>
                 </div>
             </div>
@@ -56,7 +56,7 @@ export default function WealthTrajectory({ wealthMetrics }) {
                 {/* Left: Metrics */}
                 <div className="space-y-4">
                     {/* Current Net Worth */}
-                    <div className="bg-white dark:bg-gray-700 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-600">
+                    <div className="bg-surface-highlight rounded-2xl p-5 shadow-sm border border-white/10">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Current Net Worth</span>
                             <DollarSign className={`w-5 h-5 ${isNegative ? 'text-red-500' : 'text-emerald-500'}`} />
@@ -68,7 +68,7 @@ export default function WealthTrajectory({ wealthMetrics }) {
                     </div>
 
                     {/* Monthly Velocity */}
-                    <div className="bg-white dark:bg-gray-700 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-600">
+                    <div className="bg-surface-highlight rounded-2xl p-5 shadow-sm border border-white/10">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Monthly Velocity</span>
                             {velocityPositive ? (
@@ -86,7 +86,7 @@ export default function WealthTrajectory({ wealthMetrics }) {
                     </div>
 
                     {/* Monthly Interest Burn */}
-                    <div className="bg-white dark:bg-gray-700 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-600">
+                    <div className="bg-surface-highlight rounded-2xl p-5 shadow-sm border border-white/10">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Monthly Interest Burn</span>
                             <Zap className="w-5 h-5 text-orange-500" />
@@ -101,8 +101,8 @@ export default function WealthTrajectory({ wealthMetrics }) {
                 </div>
 
                 {/* Right: Chart */}
-                <div className="bg-white dark:bg-gray-700 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-600">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">12-Month Projection</h3>
+                <div className="bg-surface-highlight rounded-2xl p-5 shadow-sm border border-white/10">
+                    <h3 className="text-lg font-bold text-white mb-4">12-Month Projection</h3>
                     <ResponsiveContainer width="100%" height={300}>
                         <AreaChart data={projections.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                             <defs>

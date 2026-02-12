@@ -147,16 +147,16 @@ export default function TransactionList({ transactions, onDelete, onEdit, groupB
                                     className="h-full"
                                 >
                                     <GlassCard className="h-full flex flex-col !p-0">
-                                        <div className="p-4 border-b border-gray-100 dark:border-white/5 flex justify-between items-center bg-gray-50/50 dark:bg-white/5">
+                                        <div className="p-4 border-b border-white/5 flex justify-between items-center">
                                             <div className="flex items-center gap-3">
                                                 <div className={clsx("p-2 rounded-lg", getColorForCategory(category))}>
                                                     <Icon className="w-5 h-5" />
                                                 </div>
-                                                <h3 className="font-bold text-gray-900 dark:text-white">{category}</h3>
+                                                <h3 className="font-bold text-white">{category}</h3>
                                             </div>
-                                            <span className="font-semibold text-gray-900 dark:text-white">${totalAmount.toLocaleString()}</span>
+                                            <span className="font-semibold text-white">${totalAmount.toLocaleString()}</span>
                                         </div>
-                                        <div className="divide-y divide-gray-100 dark:divide-white/5 flex-1 p-0">
+                                        <div className="divide-y divide-white/5 flex-1 p-0">
                                             <AnimatePresence>
                                                 {txs.map(tx => (
                                                     <motion.div
@@ -165,10 +165,10 @@ export default function TransactionList({ transactions, onDelete, onEdit, groupB
                                                         animate={{ opacity: 1, x: 0 }}
                                                         exit={{ opacity: 0, x: 20 }}
                                                         key={tx.id}
-                                                        className="p-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors flex items-center justify-between group text-sm"
+                                                        className="p-3 hover:bg-white/5 transition-colors flex items-center justify-between group text-sm"
                                                     >
                                                         <div className="flex-1 min-w-0 pr-4">
-                                                            <p className="font-medium text-gray-900 truncate dark:text-white">{tx.item}</p>
+                                                            <p className="font-medium truncate text-white">{tx.item}</p>
                                                             <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(tx.date || Date.now()).toLocaleDateString()}</p>
                                                         </div>
                                                         <div className="flex items-center gap-2">
@@ -182,7 +182,7 @@ export default function TransactionList({ transactions, onDelete, onEdit, groupB
                                                                     <CreditCard className="w-3 h-3" />
                                                                 </div>
                                                             )}
-                                                            <span className="font-medium text-gray-900 dark:text-gray-200">${tx.amount.toLocaleString()}</span>
+                                                            <span className="font-medium text-white">${tx.amount.toLocaleString()}</span>
                                                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                 {onEdit && (
                                                                     <button onClick={() => onEdit(tx)} className="p-1 text-gray-400 hover:text-blue-500 rounded">
@@ -217,7 +217,7 @@ export default function TransactionList({ transactions, onDelete, onEdit, groupB
                     <div className="flex-1 flex justify-between items-center sm:block">
                         <div className="flex justify-between items-center w-full">
                             <div>
-                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{title}</h3>
+                                <h3 className="text-lg font-bold text-white">{title}</h3>
                                 <span className="text-sm text-gray-500 dark:text-gray-400">{filteredTransactions.length} items</span>
                             </div>
                             {headerAction && <div className="ml-4">{headerAction}</div>}
@@ -260,7 +260,7 @@ export default function TransactionList({ transactions, onDelete, onEdit, groupB
                         <select
                             value={sourceFilter}
                             onChange={(e) => setSourceFilter(e.target.value)}
-                            className="pl-9 pr-8 py-2 text-sm border border-white/10 rounded-lg bg-white/5 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all appearance-none"
+                            className="pl-9 pr-8 py-2 text-sm border border-white/10 rounded-lg bg-surface text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all appearance-none"
                         >
                             <option value="all">All Sources</option>
                             <option value="amex">Amex Only</option>
@@ -284,7 +284,7 @@ export default function TransactionList({ transactions, onDelete, onEdit, groupB
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, height: 0, padding: 0 }}
                                     key={tx.id}
-                                    className="p-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors flex items-center justify-between group"
+                                    className="p-4 hover:bg-white/5 transition-colors flex items-center justify-between group"
                                 >
                                     <div className="flex items-center space-x-4">
                                         <motion.div
@@ -294,12 +294,12 @@ export default function TransactionList({ transactions, onDelete, onEdit, groupB
                                             <Icon className="w-5 h-5" />
                                         </motion.div>
                                         <div>
-                                            <p className="font-medium text-gray-900 dark:text-white">{tx.item}</p>
+                                            <p className="font-medium text-white">{tx.item}</p>
                                             <p className="text-sm text-gray-500 dark:text-gray-400">{tx.category}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <span className="font-semibold text-gray-900 dark:text-white">${tx.amount.toLocaleString()}</span>
+                                        <span className="font-semibold text-white">${tx.amount.toLocaleString()}</span>
                                         <div className="flex items-center gap-1">
                                             {(tx.source === "manual" || tx.isRecurring) ? (
                                                 <div title="Manual Entry" className="mr-2 flex items-center gap-1">

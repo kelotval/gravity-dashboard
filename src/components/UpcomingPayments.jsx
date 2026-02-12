@@ -134,7 +134,7 @@ export default function UpcomingPayments({ recurringExpenses, transactions, debt
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-full dark:bg-gray-800 dark:border-gray-700 flex flex-col">
             <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center">
+                <h3 className="text-lg font-bold text-white flex items-center">
                     <Calendar className="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" />
                     Upcoming Payments
                 </h3>
@@ -166,7 +166,7 @@ export default function UpcomingPayments({ recurringExpenses, transactions, debt
                         >
                             <div className="flex justify-between items-start">
                                 <div className="flex-1">
-                                    <div className="font-medium text-gray-900 dark:text-white text-sm">
+                                    <div className="font-medium text-white text-sm">
                                         {payment.name}
                                     </div>
                                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -174,7 +174,7 @@ export default function UpcomingPayments({ recurringExpenses, transactions, debt
                                     </div>
                                 </div>
                                 <div className="text-right ml-3">
-                                    <div className="font-bold text-gray-900 dark:text-white">
+                                    <div className="font-bold text-white">
                                         ${payment.amount.toLocaleString()}
                                     </div>
                                     <div className={`text-xs font-medium mt-1 px-2 py-0.5 rounded ${getUrgencyColor(payment.urgency)}`}>

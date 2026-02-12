@@ -14,13 +14,42 @@ const renderActiveShape = (props) => {
     const percentValue = (Number.isFinite(percent) ? percent : 0) * 100;
     const formattedPercent = `${percentValue.toFixed(0)}%`;
 
+    const words = payload.name.split(' ');
+    let lines = [];
+    let currentLine = words[0];
+
+    for (let i = 1; i < words.length; i++) {
+        if (currentLine.length + words[i].length < 12) {
+            currentLine += ' ' + words[i];
+        } else {
+            lines.push(currentLine);
+            currentLine = words[i];
+        }
+    }
+    lines.push(currentLine);
+    // Limit to 2 lines maximum
+    if (lines.length > 2) {
+        lines = [lines[0], lines.slice(1).join(' ')];
+    }
+
     return (
         <g>
-            <text x={cx} y={cy} dy={-20} textAnchor="middle" fill={fill} className="text-lg font-bold" style={{ fontSize: '1.125rem', fontWeight: 700 }}>
-                {payload.name}
-            </text>
+            {lines.length === 1 ? (
+                <text x={cx} y={cy} dy={-20} textAnchor="middle" fill={fill} className="text-lg font-bold" style={{ fontSize: '1rem', fontWeight: 700 }}>
+                    {lines[0]}
+                </text>
+            ) : (
+                <>
+                    <text x={cx} y={cy} dy={-28} textAnchor="middle" fill={fill} className="text-sm font-bold" style={{ fontSize: '0.9rem', fontWeight: 700 }}>
+                        {lines[0]}
+                    </text>
+                    <text x={cx} y={cy} dy={-12} textAnchor="middle" fill={fill} className="text-sm font-bold" style={{ fontSize: '0.9rem', fontWeight: 700 }}>
+                        {lines[1].length > 12 ? lines[1].substring(0, 10) + '...' : lines[1]}
+                    </text>
+                </>
+            )}
             <text x={cx} y={cy} dy={10} textAnchor="middle" fill={fill} className="text-2xl font-extrabold" style={{ fontSize: '1.5rem', fontWeight: 800 }}>
-                {`$${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
+                {`$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
             </text>
             <text x={cx} y={cy} dy={32} textAnchor="middle" fill="#9ca3af" className="text-xs" style={{ fontSize: '0.75rem' }}>
                 {formattedPercent}
@@ -72,10 +101,10 @@ export function IncomeExpenseChart({ data, plannedIncome = 0 }) {
     };
 
     return (
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col h-auto min-h-[500px] dark:bg-gray-800 dark:border-gray-700">
+        <div className="bg-surface p-6 rounded-xl shadow-sm border border-surface-highlight flex flex-col h-auto min-h-[500px]">
             <div className="flex justify-between items-center mb-6">
                 <div className="flex items-baseline gap-3">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Income vs Expenses</h3>
+                    <h3 className="text-lg font-semibold text-white">Income vs Expenses</h3>
                     {current.name && (
                         <span className="text-sm font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
                             {formatMonth(current.name)}
@@ -92,23 +121,23 @@ export function IncomeExpenseChart({ data, plannedIncome = 0 }) {
 
             {/* Top Row KPIs */}
             <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="p-3 bg-gray-50 rounded-lg dark:bg-gray-700/30 transition-colors duration-200">
+                <div className="p-3 bg-white/5 rounded-lg border border-white/5 transition-colors duration-200">
                     <p className="text-xs text-gray-500 mb-1 flex items-center gap-1 dark:text-gray-400">
                         <ArrowUpRight className="w-3 h-3 text-emerald-500" /> Income
                     </p>
-                    <p className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">${current.Income.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+                    <p className="font-bold text-white text-sm sm:text-base">${current.Income.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
                 </div>
-                <div className="p-3 bg-gray-50 rounded-lg dark:bg-gray-700/30 transition-colors duration-200">
+                <div className="p-3 bg-white/5 rounded-lg border border-white/5 transition-colors duration-200">
                     <p className="text-xs text-gray-500 mb-1 flex items-center gap-1 dark:text-gray-400">
                         <ArrowDownRight className="w-3 h-3 text-rose-500" /> Expenses
                     </p>
-                    <p className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">${current.Expenses.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+                    <p className="font-bold text-white text-sm sm:text-base">${current.Expenses.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
                 </div>
-                <div className={`p-3 rounded-lg dark:bg-gray-700/30 transition-colors duration-200 ${net >= 0 ? 'bg-emerald-50' : 'bg-rose-50'}`}>
+                <div className={`p-3 rounded-lg border transition-colors duration-200 ${net >= 0 ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-rose-500/10 border-rose-500/20'}`}>
                     <p className="text-xs text-gray-500 mb-1 flex items-center gap-1 dark:text-gray-400">
-                        <Wallet className={`w-3 h-3 ${net >= 0 ? 'text-emerald-600' : 'text-rose-600'}`} /> Net
+                        <Wallet className={`w-3 h-3 ${net >= 0 ? 'text-emerald-500' : 'text-rose-500'}`} /> Net
                     </p>
-                    <p className={`font-bold text-sm sm:text-base ${net >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
+                    <p className={`font-bold text-sm sm:text-base ${net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                         {net >= 0 ? '+' : ''}${net.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                     </p>
                 </div>
@@ -171,7 +200,7 @@ export function IncomeExpenseChart({ data, plannedIncome = 0 }) {
                             verticalAlign="top"
                             height={36}
                             iconType="circle"
-                            formatter={(value) => <span className="text-gray-900 dark:text-gray-300 font-medium ml-1 text-xs">{value}</span>}
+                            formatter={(value) => <span className="text-white font-medium ml-1 text-xs">{value}</span>}
                         />
                         <Area
                             type="monotone"
@@ -204,8 +233,8 @@ export function CategoryPieChart({ data }) {
     };
 
     return (
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col h-auto min-h-[500px] dark:bg-gray-800 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2 dark:text-white">Expense Categories</h3>
+        <div className="bg-surface p-6 rounded-xl shadow-sm border border-surface-highlight flex flex-col h-full">
+            <h3 className="text-lg font-semibold text-white mb-6">Expense Categories</h3>
 
             <div className="w-full flex-grow min-h-[220px] sm:min-h-[260px] relative">
                 <ResponsiveContainer width="100%" height="100%">
@@ -238,7 +267,7 @@ export function CategoryPieChart({ data }) {
                         key={entry.name}
                         className={`
                             flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all duration-200 border border-transparent
-                            ${index === activeIndex ? 'bg-gray-50 border-gray-100 dark:bg-gray-700/50 dark:border-gray-600 shadow-sm scale-105' : 'opacity-70 hover:opacity-100 hover:bg-gray-50/50 dark:hover:bg-gray-700/30'}
+                            ${index === activeIndex ? 'bg-surface-highlight border-white/10 shadow-sm scale-105' : 'opacity-70 hover:opacity-100 hover:bg-white/5'}
                         `}
                         onMouseEnter={() => setActiveIndex(index)}
                     >
@@ -247,7 +276,7 @@ export function CategoryPieChart({ data }) {
                             style={{ backgroundColor: COLORS[index % COLORS.length] }}
                         />
                         <div className="min-w-0 flex-1">
-                            <p className="text-xs font-medium text-gray-900 truncate dark:text-white capitalize">{entry.name}</p>
+                            <p className="text-xs font-medium text-white truncate capitalize">{entry.name}</p>
                             <div className="flex justify-between items-baseline">
                                 <p className="text-[10px] text-gray-500 dark:text-gray-400 font-mono">${entry.value.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
                             </div>
