@@ -172,7 +172,6 @@ export default function SpendingIntelligence({ transactions }) {
                 <div className="p-6 flex flex-col h-full">
                     <div className="flex justify-between items-center mb-4">
                         <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400">Recent Activity</h4>
-                        <button className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400">View All</button>
                     </div>
 
                     <div className="flex-1 space-y-4">

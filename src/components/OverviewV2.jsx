@@ -144,23 +144,7 @@ const ElegantChart = ({ data }) => (
     </div>
 );
 
-const PriorityAction = () => (
-    <div className="relative group overflow-hidden rounded-xl border border-rose-500/20 bg-gradient-to-br from-rose-500/5 to-transparent p-1 transition-all hover:border-rose-500/30">
-        <div className="absolute inset-0 bg-rose-500/5 blur-xl group-hover:bg-rose-500/10 transition-colors" />
-        <div className="relative flex items-center gap-4 p-4 rounded-lg bg-surface/50 backdrop-blur-sm">
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500">
-                <AlertCircle className="w-5 h-5" />
-            </div>
-            <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-semibold text-white mb-0.5">Payment Due Soon</h4>
-                <p className="text-xs text-gray-400 truncate">Amex ending in 1002 • $4,200</p>
-            </div>
-            <button className="flex-shrink-0 px-3 py-1.5 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                Pay Now
-            </button>
-        </div>
-    </div>
-);
+
 
 const CompactDebtCard = ({ debt }) => (
     <div className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 rounded-xl hover:bg-white/[0.04] hover:border-white/10 transition-all duration-300 group">
@@ -258,7 +242,7 @@ export default function OverviewV2({
                                     <h3 className="text-lg font-semibold text-white mb-1">Income vs Expenses</h3>
                                     <p className="text-sm text-content-tertiary">6 Month Trend</p>
                                 </div>
-                                <button className="text-xs font-bold text-brand hover:text-brand-hover tracking-wide uppercase">View Report</button>
+                                <button onClick={() => handleNavigate('trends')} className="text-xs font-bold text-brand hover:text-brand-hover tracking-wide uppercase">View Report</button>
                             </div>
                             <ElegantChart data={chartData} />
                         </SurfaceCard>
@@ -267,19 +251,12 @@ export default function OverviewV2({
                     {/* Right: Action & Liabilities */}
                     <div className="space-y-8">
 
-                        {/* Top Priority */}
-                        <div>
-                            <div className="flex items-center justify-between mb-4 px-1">
-                                <h3 className="text-xs font-bold text-content-tertiary uppercase tracking-wider">Top Priority</h3>
-                            </div>
-                            <PriorityAction />
-                        </div>
+                        {/* Top Priority - REMOVED MOCK */}
 
                         {/* Debt Strategy */}
                         <div>
                             <div className="flex items-center justify-between mb-4 px-1">
                                 <h3 className="text-xs font-bold text-content-tertiary uppercase tracking-wider">Active Liabilities</h3>
-                                <button onClick={() => handleNavigate('liabilities')} className="text-xs text-brand font-medium hover:text-brand-hover">View All</button>
                             </div>
                             <div className="space-y-3">
                                 {debts && debts.length > 0 ? (

@@ -16,7 +16,7 @@ import { toAud } from "../data/relocationOffers";
 // Internal Component: Scenario Tabs
 const ScenarioTabs = ({ offers, activeScenarioId, onSelect, onCreate, onDelete, baselineId }) => {
     return (
-        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 custom-scrollbar">
+        <div className="flex items-center gap-2 mb-6 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
             {offers.map(offer => {
                 const isActive = offer.id === activeScenarioId;
                 const isBaseline = offer.id === baselineId;
@@ -204,6 +204,78 @@ const AIAdvisor = ({ outcomes, activeScenarioId, baselineId }) => {
     );
 };
 
+
+// Internal Component: Strategic Assessment
+const StrategicAssessment = ({ offer, outcome }) => {
+    const { label, reasons } = outcome.verdict || { label: 'Analyzing...', reasons: [] };
+
+    return (
+        <SurfaceCard className="flex flex-col border-blue-500/10" padding="p-0">
+            <div className="p-4 border-b border-white/5 bg-white/5 flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                    <Target className="w-4 h-4 text-blue-400" />
+                    <h4 className="text-sm font-bold text-white">Strategic Assessment</h4>
+                </div>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${label === 'Strong Upgrade' ? 'bg-emerald-500/20 text-emerald-400' :
+                    label === 'High Risk' ? 'bg-red-500/20 text-red-400' :
+                        'bg-yellow-500/20 text-yellow-400'
+                    }`}>
+                    {label.toUpperCase()}
+                </span>
+            </div>
+            <div className="p-4 flex-1 flex flex-col gap-4">
+                {/* Verdict Reasons */}
+                <div>
+                    <span className="text-xs text-gray-500 font-bold uppercase mb-2 block">Key Drivers</span>
+                    <ul className="space-y-2">
+                        {reasons.length > 0 ? reasons.map((reason, i) => (
+                            <li key={i} className="flex items-start gap-2 text-sm text-gray-300">
+                                <CheckCircle2 className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                                <span>{reason}</span>
+                            </li>
+                        )) : (
+                            <li className="text-sm text-gray-500 italic">Insufficient data for assessment</li>
+                        )}
+                    </ul>
+                </div>
+
+                {/* Benefits & Risks Two-Col */}
+                <div className="grid grid-cols-2 gap-4 mt-2 pt-4 border-t border-white/5">
+                    <div>
+                        <span className="text-xs text-emerald-500 font-bold uppercase mb-2 block flex items-center gap-1">
+                            <Plus className="w-3 h-3" /> Benefits
+                        </span>
+                        <ul className="space-y-1.5">
+                            {offer.benefits?.slice(0, 3).map((b, i) => (
+                                <li key={i} className="text-xs text-gray-400 flex items-start gap-1.5">
+                                    <span className="text-emerald-500/50">•</span> {b}
+                                </li>
+                            ))}
+                            {(!offer.benefits || offer.benefits.length === 0) && (
+                                <li className="text-xs text-gray-600 italic">No benefits listed</li>
+                            )}
+                        </ul>
+                    </div>
+                    <div>
+                        <span className="text-xs text-red-500 font-bold uppercase mb-2 block flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3" /> Risks
+                        </span>
+                        <ul className="space-y-1.5">
+                            {offer.risks?.slice(0, 3).map((r, i) => (
+                                <li key={i} className="text-xs text-gray-400 flex items-start gap-1.5">
+                                    <span className="text-red-500/50">•</span> {r}
+                                </li>
+                            ))}
+                            {(!offer.risks || offer.risks.length === 0) && (
+                                <li className="text-xs text-gray-600 italic">No risks listed</li>
+                            )}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </SurfaceCard>
+    );
+};
 
 export default function CareerPathSimulator({
     offers,
@@ -477,7 +549,7 @@ export default function CareerPathSimulator({
                     </div>
 
                     {/* C. FINANCIAL BREAKDOWN TABLE */}
-                    <SurfaceCard className="overflow-hidden">
+                    <SurfaceCard className="overflow-hidden" padding="p-0">
                         <div className="p-4 border-b border-white/5 bg-white/5 flex justify-between items-center">
                             <h4 className="text-sm font-bold text-white">Financial Breakdown</h4>
                             <span className="text-xs text-gray-500">*Values in AUD/mo</span>
@@ -513,6 +585,11 @@ export default function CareerPathSimulator({
                             </tbody>
                         </table>
                     </SurfaceCard>
+
+                    {/* D. STRATEGIC ASSESSMENT */}
+                    <div className="min-h-[200px]">
+                        <StrategicAssessment offer={activeOffer} outcome={outcome} />
+                    </div>
 
                 </div>
             </div>

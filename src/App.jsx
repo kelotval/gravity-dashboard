@@ -6,6 +6,7 @@ import { IncomeExpenseChart, CategoryPieChart } from "./components/FinanceChart"
 import TransactionModal from "./components/TransactionModal";
 import PayoffPlanView from "./components/PayoffPlanView";
 import TrendsView from "./components/TrendsView";
+import AnalyticsView from "./components/AnalyticsView";
 import TransactionsView from "./components/TransactionsView";
 import FinancialCommandCenter from "./components/CommandCenter/FinancialCommandCenter";
 import SettingsView from "./components/SettingsView";
@@ -27,7 +28,8 @@ import {
     getPeriodKey,
     expandManualExpensesForMonth,
     getComputedTransactionsForMonth,
-    migrateRecurringExpenseData
+    migrateRecurringExpenseData,
+    inferTransactionKind
 } from "./utils/transactionHelpers";
 import { DEFAULT_OFFERS, DEFAULT_RELOCATION_SETTINGS } from "./data/relocationOffers";
 import { getHouseholdState, upsertHouseholdState } from "./lib/householdApi";
@@ -721,48 +723,7 @@ export default function App() {
     // --- Classification Helpers ---
 
     // --- Classification Helpers ---
-    function inferTransactionKind(tx) {
-        if (tx.kind) return tx.kind;
 
-        const amt = parseAmount(tx.amount);
-        const desc = String(tx.description || tx.merchant || tx.item || "").toLowerCase();
-
-        // Always treat explicit categories first
-        if (tx.category === "Transfers") return "transfer";
-        if (tx.category === "Income" || tx.type === "income") return "income";
-        if (tx.category === "Debt" || tx.category === "Bills Payments") return "payment"; // FIXED: Treat debt repayments as payments
-
-        // Payment keywords (paying the card)
-        const paymentKeywords = [
-            "payment", "payment thank you", "payment - thank you",
-            "direct debit", "bpay", "autopay", "auto pay",
-            "statement payment", "card payment", "amex payment"
-        ];
-        if (paymentKeywords.some(k => desc.includes(k))) return "payment";
-
-        // FIXED: Income keyword detection - prevents salary deposits from being classified as refunds
-        const incomeKeywords = [
-            "salary", "payroll", "wages", "income",
-            "deposit", "payment received", "transfer in", "eft credit"
-        ];
-        if (amt > 0 && incomeKeywords.some(k => desc.includes(k))) return "income";
-
-        // Internal Storage Convention:
-        // Expenses: NEGATIVE amounts
-        // Credits/Refunds/Payments/Income: POSITIVE amounts
-
-        // If amount is negative, it's an expense (outflow)
-        if (amt < 0) return "expense";
-
-        // If amount is positive, could be Refund, Income, or Payment.
-        // We already checked Income and Payment keywords above.
-        // Default to 'refund' for positive amounts that aren't clearly income/payment
-        // (e.g. returns, statement credits)
-        if (amt > 0) return "refund";
-
-        // Zero amounts
-        return "expense";
-    }
 
     // Recurring Expenses Modal state
     const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
@@ -1588,6 +1549,29 @@ export default function App() {
 
     // 4. Render Content
     const renderContent = () => {
+        if (currentTab === "trends") {
+            return (
+                <TrendsView
+                    income={income}
+                    transactions={transactions}
+                    debts={debts}
+                    monthlyLedger={monthlyLedger}
+                    recurringExpenses={recurringExpenses}
+                />
+            );
+        }
+
+        if (currentTab === "analytics") {
+            return (
+                <AnalyticsView
+                    incomeExpenseData={incomeExpenseData}
+                    categoryData={categoryData}
+                    transactions={activeTransactionsAll}
+                    plannedIncome={activePlannedIncome}
+                />
+            );
+        }
+
         if (currentTab === "overview_v2") {
             return (
                 <OverviewV2
@@ -1604,6 +1588,7 @@ export default function App() {
                     availableMonths={[...new Set(transactions.map(t => getPeriodKey(t)))].filter(Boolean).sort().reverse()} // Pass unique periods
                     monthlyLedger={monthlyLedger}
                     incomeHistory={incomeHistory}
+                    handleNavigate={setCurrentTab}
                 />
             );
         }

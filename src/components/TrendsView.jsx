@@ -4,7 +4,9 @@ import { TrendingUp, TrendingDown, DollarSign, Activity, Calendar, Sparkles, Ale
 import { PageContainer } from "./common/PageContainer";
 import { SurfaceCard } from './common/SurfaceCard';
 
-export default function TrendsView({ income = {}, transactions = [], debts = [] }) {
+import { getComputedTransactionsForMonth, parseAmount, inferTransactionKind } from "../utils/transactionHelpers";
+
+export default function TrendsView({ income = {}, transactions = [], debts = [], monthlyLedger = [], recurringExpenses = [] }) {
     const [selectedPeriod, setSelectedPeriod] = useState('6mo'); // 3mo, 6mo, 12mo, ytd, all
 
     // Group transactions by month
@@ -33,57 +35,48 @@ export default function TrendsView({ income = {}, transactions = [], debts = [] 
                 startDate = new Date(now.getFullYear(), now.getMonth() - 6, 1);
         }
 
-        const grouped = {};
-        const totalIncome = Object.values(income).reduce((a, b) => a + b, 0);
+        // Use Monthly Ledger if available (Source of Truth for Totals)
+        if (monthlyLedger && monthlyLedger.length > 0) {
+            const startDateStr = startDate.toISOString().substring(0, 7); // YYYY-MM
 
-        transactions.forEach(tx => {
-            if (!tx.date) return;
+            const filteredLedger = monthlyLedger.filter(row => row.monthKey >= startDateStr);
 
-            // Try parsing date - handle both string and Date object
-            let txDate;
-            if (tx.date instanceof Date) {
-                txDate = tx.date;
-            } else {
-                txDate = new Date(tx.date);
-            }
+            return filteredLedger.map(row => {
+                // Compute detailed transactions for category breakdown
+                const computedTx = getComputedTransactionsForMonth(row.monthKey, transactions, recurringExpenses);
 
-            // Check if date is valid
-            if (isNaN(txDate.getTime())) return;
+                const byCategory = computedTx
+                    .map(tx => ({ ...tx, kind: tx.kind || inferTransactionKind(tx) }))
+                    .filter(tx => tx.kind === 'expense' && tx.category !== 'Transfers')
+                    .reduce((acc, tx) => {
+                        const cat = tx.category || 'Uncategorized';
+                        acc[cat] = (acc[cat] || 0) + Math.abs(parseAmount(tx.amount));
+                        return acc;
+                    }, {});
 
-            if (txDate < startDate) return;
+                // Parse month label from YYYY-MM
+                const [y, m] = row.monthKey.split('-');
+                const dateObj = new Date(Number(y), Number(m) - 1, 1);
+                const monthLabel = dateObj.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
 
-            const monthKey = `${txDate.getFullYear()}-${String(txDate.getMonth() + 1).padStart(2, '0')}`;
-
-            if (!grouped[monthKey]) {
-                grouped[monthKey] = {
-                    month: monthKey,
-                    monthLabel: txDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
-                    income: totalIncome,
-                    expenses: 0,
-                    byCategory: {},
-                    txCount: 0
+                return {
+                    month: row.monthKey,
+                    monthLabel,
+                    income: row.plannedIncome,
+                    expenses: row.totalExpenses, // Consistent with Overview (includes Debt + Recurring)
+                    surplus: row.netSavings,
+                    savingsRate: row.savingsRate,
+                    byCategory,
+                    txCount: row.transactionCount
                 };
-            }
+            });
+        }
 
-            if (tx.amount < 0 && tx.kind !== 'transfer') {
-                grouped[monthKey].expenses += Math.abs(tx.amount);
-                grouped[monthKey].txCount += 1;
-                const category = tx.category || 'Uncategorized';
-                grouped[monthKey].byCategory[category] = (grouped[monthKey].byCategory[category] || 0) + Math.abs(tx.amount);
-            }
-        });
-
-        // Convert to array and sort by month
-        const result = Object.values(grouped)
-            .sort((a, b) => a.month.localeCompare(b.month))
-            .map(m => ({
-                ...m,
-                surplus: m.income - m.expenses,
-                savingsRate: m.income > 0 ? ((m.income - m.expenses) / m.income * 100) : 0
-            }));
-
-        return result;
-    }, [transactions, income, selectedPeriod]);
+        // Fallback (Should typically not be reached if App passes ledger)
+        const grouped = {};
+        // ... (Legacy fallback logic if needed, but we rely on Ledger)
+        return [];
+    }, [transactions, income, selectedPeriod, monthlyLedger, recurringExpenses]);
 
     // Calculate debt trajectory
     const debtTrajectory = useMemo(() => {

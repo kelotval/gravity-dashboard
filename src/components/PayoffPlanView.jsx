@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Calculator, Calendar, TrendingDown, CheckCircle, Flag, DollarSign, ArrowRight, Wallet, Info } from "lucide-react";
+import { Calculator, Calendar, TrendingDown, CheckCircle, Flag, DollarSign, ArrowRight, Wallet, Info, Sparkles, Target, Zap } from "lucide-react";
 import clsx from "clsx";
 import { generatePayoffAllocation, calculateEffectiveRateState, calculateInterestProjections } from "../utils/PayoffEngine";
 import InterestRiskPanel from "./InterestRiskPanel";
@@ -78,70 +78,79 @@ export default function PayoffPlanView({ debts, advancedSettings, onUpdateDebts 
         >
 
             {/* Debt Freedom Hero */}
-            <SurfaceCard className="!p-0 overflow-hidden relative border-indigo-500/30">
-                <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 opacity-80" />
-                <div className="relative z-10 p-8 sm:p-10 text-center sm:text-left flex flex-col sm:flex-row justify-between items-center gap-8">
-                    <div>
-                        <h2 className="text-xs font-semibold text-indigo-300 uppercase tracking-[0.2em] mb-3 flex items-center justify-center sm:justify-start gap-2">
-                            <Calendar className="w-4 h-4" />
-                            Estimated Debt Free Date
-                        </h2>
-                        <div className="text-4xl sm:text-6xl font-light text-white tracking-tighter">
-                            {simMetrics.payoffDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                        </div>
-                        <p className="text-gray-400 mt-2 text-sm">
-                            {simMetrics.timeSaved > 0 ? (
-                                <span className="text-emerald-400 font-medium">
-                                    {simMetrics.timeSaved} months sooner
-                                </span>
-                            ) : (
-                                <span>Based on current strategy</span>
-                            )}
-                        </p>
-                    </div>
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 via-gray-950 to-black border border-white/10 shadow-2xl mb-8">
+                {/* Background Effects */}
+                <div className="absolute top-0 right-0 p-32 bg-indigo-500/10 rounded-full blur-3xl transform translate-x-10 -translate-y-10" />
+                <div className="absolute bottom-0 left-0 p-24 bg-purple-500/5 rounded-full blur-3xl transform -translate-x-10 translate-y-10" />
 
-                    <div className="flex flex-col gap-4 min-w-[200px]">
-                        <div className="bg-white/5 p-4 rounded-xl border border-white/10 backdrop-blur-sm text-center sm:text-right">
-                            <label className="text-xs text-gray-400 uppercase tracking-wider font-semibold block mb-1">Monthly Commitment</label>
-                            <span className="text-2xl font-bold text-white block">
-                                ${totalMonthlyCommitment.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                            </span>
+                <div className="relative z-10 p-8 sm:p-10">
+                    <div className="flex flex-col lg:flex-row justify-between items-center gap-10">
+                        {/* Left: Main Metric */}
+                        <div className="text-center lg:text-left space-y-4">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300 text-xs font-semibold uppercase tracking-wider">
+                                <Sparkles className="w-3 h-3 text-emerald-400" />
+                                Debt Free Target
+                            </div>
+                            <div>
+                                <h2 className="text-5xl sm:text-6xl font-extralight text-white tracking-tight">
+                                    {simMetrics.payoffDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                </h2>
+                                <p className="text-gray-400 mt-2 text-lg font-light">
+                                    {simMetrics.timeSaved > 0 ? (
+                                        <span className="flex items-center justify-center lg:justify-start gap-2">
+                                            <span className="text-emerald-400 font-medium">
+                                                <TrendingDown className="w-4 h-4 inline" /> {simMetrics.timeSaved} months sooner
+                                            </span>
+                                            <span className="text-gray-500">than baseline</span>
+                                        </span>
+                                    ) : (
+                                        "Based on current payment strategy"
+                                    )}
+                                </p>
+                            </div>
                         </div>
-                        <div className="bg-white/5 p-3 rounded-xl border border-white/10 flex items-center justify-between gap-3">
-                            <label className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Surplus</label>
-                            <div className="flex items-center group">
-                                <span className="text-gray-500 mr-1 group-focus-within:text-emerald-400 transition-colors">$</span>
-                                <input
-                                    type="number"
-                                    value={surplusCash}
-                                    onChange={(e) => setSurplusCash(Number(e.target.value))}
-                                    className="bg-transparent text-lg font-bold w-16 text-right focus:outline-none text-emerald-400 placeholder-gray-600"
-                                    placeholder="0"
-                                />
+
+                        {/* Right: Controls & Secondary Metrics */}
+                        <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+                            <div className="bg-white/5 backdrop-blur-md p-5 rounded-2xl border border-white/10 flex-1 min-w-[200px]">
+                                <label className="text-xs text-gray-400 uppercase tracking-wider font-semibold block mb-2">Total Monthly Pay</label>
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-3xl font-bold text-white tracking-tight">
+                                        ${totalMonthlyCommitment.toLocaleString()}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="bg-white/5 backdrop-blur-md p-5 rounded-2xl border border-white/10 flex-1 min-w-[200px] group transition-colors hover:bg-white/[0.07]">
+                                <label className="text-xs text-gray-400 uppercase tracking-wider font-semibold block mb-2 flex items-center justify-between">
+                                    <span>Extra Payment</span>
+                                    <Zap className="w-3 h-3 text-emerald-400" />
+                                </label>
+                                <div className="flex items-center">
+                                    <span className="text-2xl font-medium text-gray-400 mr-1">$</span>
+                                    <input
+                                        type="number"
+                                        value={surplusCash}
+                                        onChange={(e) => setSurplusCash(Number(e.target.value))}
+                                        className="bg-transparent text-3xl font-bold w-full text-emerald-400 focus:outline-none placeholder-gray-600"
+                                        placeholder="0"
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </SurfaceCard>
 
-            {/* What-If Simulator (Advanced Feature) */}
-            {advancedSettings?.interestCostSimulator && (
-                <SurfaceCard className="!p-0 overflow-hidden relative border-purple-500/30">
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-900/40 to-indigo-900/40 pointer-events-none" />
-                    <div className="absolute top-0 right-0 p-32 bg-purple-500 opacity-10 rounded-full blur-3xl transform translate-x-10 -translate-y-10"></div>
-
-                    <div className="relative z-10 p-6">
-                        <h3 className="text-lg font-bold flex items-center gap-2 mb-4 text-white">
-                            <Calculator className="w-5 h-5 text-purple-300" />
-                            Interest Cost Simulator
-                        </h3>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div>
-                                <label className="text-xs text-purple-200 uppercase tracking-wider font-semibold mb-2 block">
-                                    Extra Monthly Contribution
-                                </label>
-                                <div className="flex items-center gap-4">
+                    {/* Simulator Slider (Integrated) */}
+                    {advancedSettings?.interestCostSimulator && (
+                        <div className="mt-8 pt-8 border-t border-white/5 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            <div className="flex flex-col md:flex-row items-center gap-6">
+                                <div className="flex-1 w-full">
+                                    <div className="flex justify-between mb-2">
+                                        <label className="text-xs text-indigo-300 font-medium flex items-center gap-2">
+                                            <Calculator className="w-3 h-3" /> Simulator: Adjust Extra Cash
+                                        </label>
+                                        <span className="text-xs text-gray-500">Using extra cash saves interest</span>
+                                    </div>
                                     <input
                                         type="range"
                                         min="0"
@@ -149,129 +158,136 @@ export default function PayoffPlanView({ debts, advancedSettings, onUpdateDebts 
                                         step="100"
                                         value={surplusCash}
                                         onChange={(e) => setSurplusCash(Number(e.target.value))}
-                                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-400"
+                                        className="w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-indigo-400 hover:accent-indigo-300 transition-colors"
                                     />
-                                    <span className="font-mono font-bold text-xl min-w-[80px] text-right text-white">${surplusCash}</span>
+                                    <div className="flex justify-between mt-1 text-[10px] text-gray-600 font-mono">
+                                        <span>$0</span>
+                                        <span>$2,500</span>
+                                        <span>$5,000</span>
+                                    </div>
                                 </div>
-                                <p className="text-xs text-blue-200/70 mt-3 flex items-center gap-1.5">
-                                    <Info className="w-3 h-3" />
-                                    <span>Drag to see how extra payments reduce your life-of-loan interest.</span>
-                                </p>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                {/* Total Interest Impact */}
-                                <div className="bg-white/5 p-4 rounded-xl border border-white/10 flex flex-col justify-between">
-                                    <div>
-                                        <p className="text-gray-300 text-xs uppercase font-semibold tracking-wider">Projected Interest</p>
-                                        <p className="text-2xl font-bold text-white mt-1">
-                                            ${Math.round(simMetrics.currentInterest).toLocaleString()}
+                                <div className="flex items-center gap-6 text-sm">
+                                    <div className="text-center md:text-right">
+                                        <p className="text-gray-500 text-[10px] uppercase tracking-wider">Interest Saved</p>
+                                        <p className="text-lg font-bold text-emerald-400">
+                                            ${Math.round(simMetrics.interestSaved).toLocaleString()}
                                         </p>
                                     </div>
-                                    {surplusCash > 0 && (
-                                        <div className="mt-2 text-xs font-bold text-emerald-300 flex items-center gap-1">
-                                            <TrendingDown className="w-3 h-3" />
-                                            Save ${Math.round(simMetrics.interestSaved).toLocaleString()}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Timeline Impact */}
-                                <div className="bg-white/5 p-4 rounded-xl border border-white/10 flex flex-col justify-between">
-                                    <div>
-                                        <p className="text-gray-300 text-xs uppercase font-semibold tracking-wider">
-                                            {simMetrics.timeSaved > 0 ? 'All Debts Cleared' : 'Debt Free By'}
-                                        </p>
-                                        <p className="text-xl font-bold text-white mt-1">
-                                            {simMetrics.payoffDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                                        </p>
-                                    </div>
-                                    {surplusCash > 0 && simMetrics.timeSaved > 0 && (
-                                        <div className="mt-2 text-xs font-bold text-blue-300 flex items-center gap-1">
-                                            <Calendar className="w-3 h-3" />
-                                            {simMetrics.timeSaved} Months Sooner
-                                        </div>
-                                    )}
-                                    {surplusCash > 0 && simMetrics.priorityDebtSaved > 0 && simMetrics.timeSaved === 0 && (
-                                        <div className="mt-2 text-xs font-bold text-blue-300">
-                                            Priority Debt: -{simMetrics.priorityDebtSaved} Mo
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </SurfaceCard>
-            )}
+                    )}
+                </div>
+            </div>
 
-            <InterestRiskPanel
-                {...calculateInterestProjections(debts)}
-            />
+            <div className="animate-fade-in-up delay-100">
+                <InterestRiskPanel
+                    {...calculateInterestProjections(debts)}
+                />
+            </div>
 
             {/* Smart Allocation List */}
-            <div className="space-y-4">
-                <h3 className="text-md font-bold text-gray-500 uppercase tracking-wider pl-1">
-                    Priority Order
-                </h3>
+            <div className="space-y-6 mt-8 animate-fade-in-up delay-200">
+                <div className="flex items-center justify-between px-2">
+                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <Flag className="w-4 h-4" /> Optimization Strategy
+                    </h3>
+                    <span className="text-xs text-gray-500 bg-white/5 px-2 py-1 rounded">Avalanche Method (Highest Rate First)</span>
+                </div>
 
-                {allocationPlan.map((item, index) => {
-                    const isTopPriority = index === 0;
-                    const { allocation } = item;
-                    const { rateIsSwitched } = calculateEffectiveRateState(item);
+                <div className="grid grid-cols-1 gap-4">
+                    {allocationPlan.map((item, index) => {
+                        const isTopPriority = index === 0;
+                        const { allocation } = item;
+                        const { rateIsSwitched } = calculateEffectiveRateState(item);
 
-                    return (
-                        <SurfaceCard key={item.id} padding="p-0" className={clsx("transition-all relative overflow-hidden",
-                            isTopPriority
-                                ? "border-indigo-500/30 ring-1 ring-indigo-500/20 bg-indigo-500/[0.02]"
-                                : "hover:bg-white/[0.02]"
-                        )}>
-                            {isTopPriority && (
-                                <div className="absolute top-0 right-0 bg-indigo-500/80 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl z-10 shadow-lg">
-                                    FOCUS
-                                </div>
-                            )}
+                        return (
+                            <div key={item.id} className={clsx(
+                                "relative group rounded-xl border transition-all duration-300 overflow-hidden",
+                                isTopPriority
+                                    ? "bg-gradient-to-r from-white/5 to-transparent border-white/10 shadow-lg shadow-black/50"
+                                    : "bg-surface border-white/5 hover:border-white/10 hover:bg-white/[0.02]"
+                            )}>
+                                {isTopPriority && (
+                                    <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500/50" />
+                                )}
 
-                            <div className="p-5 flex flex-col sm:flex-row gap-6 items-center">
-                                {/* Rank */}
-                                <div className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-xs font-bold border ${isTopPriority ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' : 'bg-white/5 text-gray-500 border-white/5'}`}>
-                                    {index + 1}
-                                </div>
-
-                                {/* Debt Details */}
-                                <div className="flex-1 text-center sm:text-left min-w-0">
-                                    <h4 className="font-semibold text-lg text-white truncate">{item.name}</h4>
-                                    <div className="flex items-center justify-center sm:justify-start gap-3 mt-1 text-sm text-gray-500">
-                                        <span>${item.currentBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                                        <span>•</span>
-                                        <span>{item.rate}% APR</span>
-                                        {rateIsSwitched && <span className="text-red-400 font-medium text-xs bg-red-500/10 px-1.5 rounded">Rate Switched</span>}
+                                <div className="p-5 flex flex-col md:flex-row items-center gap-6">
+                                    {/* Rank Indicator */}
+                                    <div className="flex-shrink-0">
+                                        <div className={clsx(
+                                            "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border",
+                                            isTopPriority
+                                                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-md shadow-emerald-900/10"
+                                                : "bg-gray-800 text-gray-500 border-gray-700"
+                                        )}>
+                                            {index + 1}
+                                        </div>
                                     </div>
-                                </div>
 
-                                {/* Payment Info */}
-                                <div className="flex flex-col items-center sm:items-end gap-1">
-                                    <span className="text-2xl font-bold text-white">${allocation.totalPay.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                                    <div className="flex items-center gap-2 text-xs">
-                                        <span className="text-gray-500">Monthly</span>
-                                        {allocation.extraPay > 0 && (
-                                            <span className="text-emerald-400 font-medium bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
-                                                +${allocation.extraPay.toLocaleString(undefined, { maximumFractionDigits: 0 })} Extra
-                                            </span>
-                                        )}
+                                    {/* Content */}
+                                    <div className="flex-1 min-w-0 text-center md:text-left grid grid-cols-1 md:grid-cols-3 gap-6 w-full items-center">
+
+                                        {/* Debt Info */}
+                                        <div className="col-span-1">
+                                            <div className="flex items-center justify-center md:justify-start gap-2 mb-1">
+                                                <h4 className={clsx("font-bold text-lg truncate", isTopPriority ? "text-white" : "text-gray-300")}>
+                                                    {item.name}
+                                                </h4>
+                                                {isTopPriority && <span className="bg-emerald-500/10 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide border border-emerald-500/20">Focus</span>}
+                                            </div>
+                                            <div className="text-sm text-gray-500 flex items-center justify-center md:justify-start gap-3">
+                                                <span className="flex items-center gap-1"><Wallet className="w-3 h-3" /> ${item.currentBalance.toLocaleString()}</span>
+                                                <span className="w-1 h-1 bg-gray-700 rounded-full" />
+                                                <span className={clsx(item.rate > 10 ? "text-amber-500" : "text-gray-400")}>{item.rate}% APR</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Progress Bar (Visual Only for now based on some heuristic or just balance relative to max?) */}
+                                        {/* Since we don't have 'original balance', we can't show true progress. We'll show Payoff Timeline instead. */}
+                                        <div className="col-span-1 flex flex-col items-center">
+                                            <span className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-2">Allocated Payment</span>
+                                            <div className="text-2xl font-bold text-white flex items-center gap-2">
+                                                ${allocation.totalPay.toLocaleString()}
+                                                {allocation.extraPay > 0 && (
+                                                    <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                                                        +${allocation.extraPay}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Timeline */}
+                                        <div className="col-span-1 md:text-right flex flex-col items-center md:items-end">
+                                            <span className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1">Payoff In</span>
+                                            <div className="flex items-center gap-2 text-white font-medium">
+                                                <Calendar className="w-4 h-4 text-gray-600" />
+                                                {isFinite(allocation.monthsToPayoff) ? (
+                                                    <span>{Math.ceil(allocation.monthsToPayoff)} months</span>
+                                                ) : (
+                                                    <span className="text-rose-400">Never</span>
+                                                )}
+                                            </div>
+                                            {isFinite(allocation.monthsToPayoff) && allocation.monthsToPayoff > 0 && (
+                                                <span className="text-xs text-gray-600 mt-1">
+                                                    Est. {new Date(new Date().setMonth(new Date().getMonth() + allocation.monthsToPayoff)).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </SurfaceCard>
-                    );
-                })}
+                        );
+                    })}
 
-                {debts.length === 0 && (
-                    <SurfaceCard className="text-center py-12">
-                        <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
-                        <h3 className="text-lg font-bold text-white">Debt Free!</h3>
-                        <p className="text-gray-500 dark:text-gray-400">You have no active debts. Time to build wealth!</p>
-                    </SurfaceCard>
-                )}
+                    {debts.length === 0 && (
+                        <SurfaceCard className="text-center py-12">
+                            <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
+                            <h3 className="text-lg font-bold text-white">Debt Free!</h3>
+                            <p className="text-gray-500 dark:text-gray-400">You have no active debts. Time to build wealth!</p>
+                        </SurfaceCard>
+                    )}
+                </div>
             </div>
         </PageContainer>
     );

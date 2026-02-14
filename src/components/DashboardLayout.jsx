@@ -21,6 +21,7 @@ export default function DashboardLayout({ children, currentTab, onTabChange, syn
                 { id: "overview_v2", icon: LayoutDashboard, label: "Overview" },
                 { id: "payoff", icon: Calendar, label: "Payoff Plan" },
                 { id: "trends", icon: LineChart, label: "Trends" },
+                { id: "analytics", icon: PieChart, label: "Analytics" },
             ]
         },
         {

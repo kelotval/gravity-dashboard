@@ -240,3 +240,50 @@ export function migrateRecurringExpenseData(oldExpenses) {
         };
     });
 }
+
+/**
+ * Infer transaction kind (income, expense, payment, transfer) based on metadata
+ */
+export function inferTransactionKind(tx) {
+    if (tx.kind) return tx.kind;
+
+    const amt = parseAmount(tx.amount);
+    const desc = String(tx.description || tx.merchant || tx.item || "").toLowerCase();
+
+    // Always treat explicit categories first
+    if (tx.category === "Transfers") return "transfer";
+    if (tx.category === "Income" || tx.type === "income") return "income";
+    if (tx.category === "Debt" || tx.category === "Bills Payments") return "payment"; // FIXED: Treat debt repayments as payments
+
+    // Payment keywords (paying the card)
+    const paymentKeywords = [
+        "payment", "payment thank you", "payment - thank you",
+        "direct debit",
+        "bpay", "autopay", "auto pay",
+        "statement payment", "card payment", "amex payment"
+    ];
+    if (paymentKeywords.some(k => desc.includes(k))) return "payment";
+
+    // FIXED: Income keyword detection - prevents salary deposits from being classified as refunds
+    const incomeKeywords = [
+        "salary", "payroll", "wages", "income",
+        "deposit", "payment received", "transfer in", "eft credit"
+    ];
+    if (amt > 0 && incomeKeywords.some(k => desc.includes(k))) return "income";
+
+    // Internal Storage Convention:
+    // Expenses: NEGATIVE amounts
+    // Credits/Refunds/Payments/Income: POSITIVE amounts
+
+    // If amount is negative, it's an expense (outflow)
+    if (amt < 0) return "expense";
+
+    // If amount is positive, could be Refund, Income, or Payment.
+    // We already checked Income and Payment keywords above.
+    // Default to 'refund' for positive amounts that aren't clearly income/payment
+    // (e.g. returns, statement credits)
+    if (amt > 0) return "refund";
+
+    // Zero amounts
+    return "expense";
+}

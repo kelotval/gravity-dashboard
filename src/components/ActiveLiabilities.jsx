@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Wallet, Car, AlertCircle, TrendingUp, AlertTriangle, ArrowRight, Info } from "lucide-react";
+import { Wallet, Car, AlertCircle, TrendingUp, AlertTriangle, ArrowRight, Info, CheckCircle } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
 import { getRateWarnings, calculatePayoffStrategy, getCurrentRate, deriveDebtStatus, calculateEffectiveRateState } from "../utils/PayoffEngine";
 import kiaImage from "../assets/kia_sportage.png";
@@ -42,6 +42,14 @@ export default function ActiveLiabilities({ debts, onUpdateDebts, advancedSettin
         </div>
     );
 
+    const gridClass = useMemo(() => {
+        const count = debts.length;
+        if (count === 1) return "grid grid-cols-1";
+        if (count === 2) return "grid grid-cols-1 md:grid-cols-2";
+        if (count === 4) return "grid grid-cols-1 md:grid-cols-2"; // Balanced 2x2 for 4 items
+        return "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3"; // Default for 3, 5, 6+
+    }, [debts.length]);
+
     return (
         <PageContainer
             title="Active Liabilities"
@@ -52,12 +60,12 @@ export default function ActiveLiabilities({ debts, onUpdateDebts, advancedSettin
             {/* Smart Recommendations Engine */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* 1. Priority Action */}
-                <GlassCard className="lg:col-span-2 !p-0 relative overflow-hidden group border-indigo-500/30">
-                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/40 via-purple-900/40 to-transparent pointer-events-none" />
+                <GlassCard className="lg:col-span-2 !p-0 relative overflow-hidden group border-white/10">
+                    <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-950 to-black pointer-events-none" />
                     <div className="relative z-10 p-6 flex flex-col h-full justify-between">
                         <div>
                             <div className="flex items-center gap-2 mb-2">
-                                <span className="bg-white/10 text-indigo-200 px-2 py-0.5 rounded text-xs font-medium border border-white/10 backdrop-blur-sm">Recommendation</span>
+                                <span className="bg-white/5 text-gray-300 px-2 py-0.5 rounded text-xs font-medium border border-white/10 backdrop-blur-sm">Recommendation</span>
                                 {warnings.length > 0 && (
                                     <span className="bg-red-500/20 text-red-300 border border-red-500/30 px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1">
                                         <AlertTriangle className="w-3 h-3" /> Rate Hike Risk
@@ -87,15 +95,14 @@ export default function ActiveLiabilities({ debts, onUpdateDebts, advancedSettin
                             </div>
                         )}
 
-                        {/* AI Insight Card (Advanced Feature) */}
                         {advancedSettings?.aiInsights && topPriority && (
-                            <div className="mt-6 bg-indigo-500/10 border border-indigo-500/20 p-4 rounded-xl backdrop-blur-sm relative overflow-hidden">
-                                <div className="absolute top-0 left-0 w-1 h-full bg-indigo-400"></div>
-                                <h4 className="flex items-center gap-2 text-indigo-300 font-bold text-xs mb-2 uppercase tracking-wide">
-                                    <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
+                            <div className="mt-6 bg-white/5 border border-white/10 p-4 rounded-xl backdrop-blur-sm relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500/50"></div>
+                                <h4 className="flex items-center gap-2 text-emerald-400 font-bold text-xs mb-2 uppercase tracking-wide">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                                     AI Analysis
                                 </h4>
-                                <p className="text-sm text-indigo-100/80 leading-relaxed">
+                                <p className="text-sm text-gray-400 leading-relaxed">
                                     My algorithms selected <strong>{topPriority.name}</strong> as your primary target because its
                                     <strong className="text-white"> {getCurrentRate(topPriority)}% rate</strong> generates the highest daily interest cost relative to its balance.
                                     {topPriority.promoEndDate && <span> Note: Pending rate hike detected on <strong>{new Date(topPriority.promoEndDate).toLocaleDateString()}</strong>.</span>}
@@ -197,7 +204,7 @@ export default function ActiveLiabilities({ debts, onUpdateDebts, advancedSettin
             {/* Debt Cards Grid */}
             <div>
                 <h3 className="text-xl font-bold text-white mb-6 pl-1">Credit Cards & Loans</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className={`${gridClass} gap-6`}>
                     {debts.map((debt) => {
                         const currentRate = getCurrentRate(debt);
                         const isPriority = topPriority && topPriority.id === debt.id;
@@ -216,7 +223,7 @@ export default function ActiveLiabilities({ debts, onUpdateDebts, advancedSettin
                         const gradientId = `color-${debt.id}`;
 
                         return (
-                            <GlassCard key={debt.id} className={`!p-0 overflow-hidden flex flex-col transition-all duration-300 ${isPriority ? 'ring-2 ring-indigo-500/50' : ''}`}>
+                            <GlassCard key={debt.id} className={`!p-0 overflow-hidden flex flex-col transition-all duration-300 ${isPriority ? 'ring-1 ring-emerald-500/30 shadow-lg shadow-black/50' : ''}`}>
                                 <div className={`h-1 w-full ${debt.accent === 'red' ? 'bg-red-500' :
                                     debt.accent === 'orange' ? 'bg-orange-500' : 'bg-blue-500'
                                     }`} />
@@ -229,7 +236,7 @@ export default function ActiveLiabilities({ debts, onUpdateDebts, advancedSettin
                                                     {debt.dueLabel}
                                                 </span>
                                                 {isPriority && (
-                                                    <span className="text-xs font-bold text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded flex items-center gap-1 border border-indigo-500/30">
+                                                    <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded flex items-center gap-1 border border-emerald-500/20">
                                                         <ArrowRight className="w-3 h-3" /> Priority
                                                     </span>
                                                 )}
@@ -335,39 +342,95 @@ export default function ActiveLiabilities({ debts, onUpdateDebts, advancedSettin
             </div>
 
             {/* Vehicle Section */}
-            <h3 className="text-xl font-bold text-white pl-1">Vehicle Assets</h3>
-            <GlassCard className="!p-0 overflow-hidden grid grid-cols-1 lg:grid-cols-3">
-                <div className="lg:col-span-1 bg-surface relative h-64 lg:h-auto">
-                    <img
-                        src={kiaImage}
-                        alt="Kia Sportage"
-                        className="absolute inset-0 w-full h-full object-cover"
-                    />
-                </div>
-                <div className="p-8 lg:col-span-2 flex flex-col justify-center">
-                    <div className="flex items-center mb-4">
-                        <Car className="w-6 h-6 text-blue-500 mr-2" />
-                        <h3 className="text-2xl font-bold text-white">Kia Sportage 2024</h3>
+            <h3 className="text-xl font-bold text-white pl-1 mt-8 mb-4">Vehicle Assets</h3>
+            <GlassCard className="!p-0 border-white/5 overflow-hidden">
+                <div className="grid grid-cols-1 md:grid-cols-12 min-h-[300px]">
+
+                    {/* Left: Asset Identity & Compliance (40%) */}
+                    <div className="md:col-span-5 p-8 flex flex-col justify-between border-b md:border-b-0 md:border-r border-white/5 relative">
+                        <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/5 to-transparent pointer-events-none" />
+
+                        <div>
+                            <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-6 shadow-inner shadow-indigo-500/5">
+                                <Car className="w-7 h-7 text-indigo-400" />
+                            </div>
+                            <h3 className="text-2xl font-bold text-white tracking-tight leading-none mb-2">Kia Sportage</h3>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">2024 Model</span>
+                                <span className="w-1 h-1 rounded-full bg-gray-600"></span>
+                                <span className="text-xs font-semibold text-indigo-400 uppercase tracking-widest">AWD GT-Line</span>
+                            </div>
+                        </div>
+
+                        <div className="mt-8 space-y-3">
+                            <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10 backdrop-blur-md">
+                                <div className="flex items-center gap-3">
+                                    <div className="relative flex h-2.5 w-2.5">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold text-emerald-400 leading-none">Green Slip Active</p>
+                                        <p className="text-[10px] text-gray-500 mt-0.5">Renew in 4mo</p>
+                                    </div>
+                                </div>
+                                <CheckCircle className="w-4 h-4 text-emerald-500 opacity-50" />
+                            </div>
+
+                            <div className="flex items-center justify-between p-3 rounded-xl bg-blue-500/5 border border-blue-500/10 backdrop-blur-md">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-blue-500/50"></div>
+                                    <div>
+                                        <p className="text-xs font-bold text-blue-400 leading-none">Registration</p>
+                                        <p className="text-[10px] text-gray-500 mt-0.5">NSW • CQ-94-LP</p>
+                                    </div>
+                                </div>
+                                <div className="text-[10px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded border border-blue-500/30">OK</div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
-                        <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Loan Balance</p>
-                            <p className="text-xl font-bold text-white">$35,000.00</p>
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Monthly Repayment</p>
-                            <p className="text-xl font-bold text-white">$1,475.00</p>
-                        </div>
-                    </div>
+                    {/* Right: Financial Dynamics (60%) */}
+                    <div className="md:col-span-7 p-8 flex flex-col justify-center relative">
+                        <div className="grid grid-cols-2 gap-8 mb-8">
+                            <div>
+                                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-1">Loan Utility</p>
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-3xl font-bold text-white tracking-tight">$35,000</span>
+                                    <span className="text-xs text-gray-400 font-medium">.00</span>
+                                </div>
+                                <div className="w-full h-1.5 bg-gray-800 rounded-full mt-3 overflow-hidden">
+                                    <div className="h-full bg-gradient-to-r from-indigo-600 to-blue-500 w-[70%] rounded-full shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
+                                </div>
+                                <div className="flex justify-between mt-1.5">
+                                    <span className="text-[10px] text-gray-500 font-mono">Pd: $15k</span>
+                                    <span className="text-[10px] text-indigo-400 font-mono">70% Rem</span>
+                                </div>
+                            </div>
 
-                    <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 flex items-start">
-                        <AlertCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
-                        <div>
-                            <h5 className="font-semibold text-green-700 dark:text-green-300 text-sm">Green Slip (CTP) Status: Active</h5>
-                            <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                                Compulsory Third Party insurance covers personal injury liability in NSW. Ensure renewal by registration due date.
-                            </p>
+                            <div>
+                                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-1">Effective Cost</p>
+                                <p className="text-3xl font-bold text-white tracking-tight">$49.16</p>
+                                <p className="text-xs text-indigo-300/80 mt-1 font-medium flex items-center gap-1">
+                                    <span className="w-1 h-1 rounded-full bg-indigo-400"></span>
+                                    per day
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-4 pt-6 border-t border-white/5">
+                            <div className="bg-white/5 rounded-lg p-3 border border-white/5">
+                                <p className="text-[10px] text-gray-400 mb-1">Monthly</p>
+                                <p className="font-bold text-white text-sm">$1,475</p>
+                            </div>
+                            <div className="bg-white/5 rounded-lg p-3 border border-white/5">
+                                <p className="text-[10px] text-gray-400 mb-1">Rate</p>
+                                <p className="font-bold text-orange-400 text-sm">6.29%</p>
+                            </div>
+                            <div className="bg-white/5 rounded-lg p-3 border border-white/5">
+                                <p className="text-[10px] text-gray-400 mb-1">Type</p>
+                                <p className="font-bold text-blue-400 text-sm">Secured</p>
+                            </div>
                         </div>
                     </div>
                 </div>
