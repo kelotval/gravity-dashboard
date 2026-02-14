@@ -147,7 +147,7 @@ const ElegantChart = ({ data }) => (
 
 
 const CompactDebtCard = ({ debt }) => (
-    <div className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 rounded-xl hover:bg-white/[0.04] hover:border-white/10 transition-all duration-300 group">
+    <div className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 rounded-xl hover:bg-white/[0.04] hover:border-white/10 transition-all duration-300 group flex-1 min-h-[80px]">
         <div>
             <div className="flex items-center gap-2 mb-1">
                 <span className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors">{debt.name}</span>
@@ -157,6 +157,9 @@ const CompactDebtCard = ({ debt }) => (
             </div>
             <div className="text-xs text-gray-500">
                 {debt.rate}% APR • ${debt.minPayment}/mo
+            </div>
+            <div className="text-[10px] text-gray-600 mt-1 uppercase tracking-wider font-medium">
+                {debt.debtType || 'Loan'} • {debt.dueLabel || 'Monthly'}
             </div>
         </div>
         <div className="text-right">
@@ -232,11 +235,11 @@ export default function OverviewV2({
                 </SurfaceCard>
 
                 {/* 3. Main Split: Analysis vs Action */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
 
                     {/* Left: Financial Trends */}
-                    <div className="lg:col-span-2 space-y-8">
-                        <SurfaceCard className="p-6 sm:p-8">
+                    <div className="lg:col-span-2 flex flex-col">
+                        <SurfaceCard className="p-6 sm:p-8 h-full">
                             <div className="flex items-center justify-between mb-8">
                                 <div>
                                     <h3 className="text-lg font-semibold text-white mb-1">Income vs Expenses</h3>
@@ -249,26 +252,27 @@ export default function OverviewV2({
                     </div>
 
                     {/* Right: Action & Liabilities */}
-                    <div className="space-y-8">
-
-                        {/* Top Priority - REMOVED MOCK */}
-
-                        {/* Debt Strategy */}
-                        <div>
-                            <div className="flex items-center justify-between mb-4 px-1">
+                    <div className="flex flex-col">
+                        <SurfaceCard className="h-full flex flex-col p-6 sm:p-8">
+                            <div className="flex items-center justify-between mb-6">
                                 <h3 className="text-xs font-bold text-content-tertiary uppercase tracking-wider">Active Liabilities</h3>
+                                <div className="text-xs text-content-tertiary">
+                                    {debts ? debts.length : 0} Active
+                                </div>
                             </div>
-                            <div className="space-y-3">
+                            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar flex flex-col gap-3">
                                 {debts && debts.length > 0 ? (
-                                    debts.slice(0, 3).map((debt, i) => (
+                                    debts.map((debt, i) => (
                                         <CompactDebtCard key={i} debt={debt} />
                                     ))
                                 ) : (
-                                    <p className="text-content-tertiary text-sm italic p-4">No active liabilities.</p>
+                                    <div className="h-full flex flex-col items-center justify-center text-content-tertiary opacity-50 flex-1">
+                                        <Shield className="w-12 h-12 mb-2" />
+                                        <p className="text-sm italic">No active liabilities</p>
+                                    </div>
                                 )}
                             </div>
-                        </div>
-
+                        </SurfaceCard>
                     </div>
                 </div>
 
