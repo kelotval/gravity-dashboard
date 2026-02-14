@@ -7,14 +7,14 @@ import TransactionModal from "./components/TransactionModal";
 import PayoffPlanView from "./components/PayoffPlanView";
 import TrendsView from "./components/TrendsView";
 import TransactionsView from "./components/TransactionsView";
-import SmartInsightsView from "./components/SmartInsightsView";
+import FinancialCommandCenter from "./components/CommandCenter/FinancialCommandCenter";
 import SettingsView from "./components/SettingsView";
 import ActiveLiabilities from "./components/ActiveLiabilities";
 import InsightsCard from "./components/InsightsCard";
 import SpendingIntelligence from "./components/SpendingIntelligence";
 import DebtRiskBanner from "./components/DebtRiskBanner";
 import InterestRiskPanel from "./components/InterestRiskPanel";
-import ActionPlanPanel from "./components/ActionPlanPanel";
+
 import SubscriptionIntelligence from "./components/SubscriptionIntelligence";
 import WealthTrajectory from "./components/WealthTrajectory";
 import RelocationCommandCenter from "./components/RelocationCommandCenter";
@@ -1670,31 +1670,15 @@ export default function App() {
         }
 
         if (currentTab === "insights") {
-            // Use last completed month for more accurate insights
-            const today = new Date();
-            const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-            const lastMonthKey = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
-
-            // Get transactions for last completed month
-            const lastMonthTransactions = getComputedTransactionsForMonth(
-                lastMonthKey,
-                transactions,
-                recurringExpenses
-            ).map(tx => ({
-                ...tx,
-                kind: tx.kind || inferTransactionKind(tx)
-            }));
-
-            // Get income for last month from ledger
-            const lastMonthLedgerEntry = getActiveLedgerRow(lastMonthKey, monthlyLedger);
-            const lastMonthIncome = lastMonthLedgerEntry.plannedIncome;
-
             return (
-                <SmartInsightsView
-                    transactions={lastMonthTransactions}
-                    income={{ monthly: lastMonthIncome }}
+                <FinancialCommandCenter
+                    transactions={transactions}
+                    income={income}
                     debts={debts}
-                    periodLabel={`${lastMonth.toLocaleString('default', { month: 'long' })} ${lastMonth.getFullYear()}`}
+                    recurringExpenses={recurringExpenses}
+                    activePeriodKey={activePeriodKey}
+                    profile={profile}
+                    monthlyLedger={monthlyLedger}
                 />
             );
         }
@@ -1768,15 +1752,7 @@ export default function App() {
                     />
                 </div>
 
-                {/* 30-Day Action Plan */}
-                <ActionPlanPanel
-                    transactions={activeTransactionsAll}
-                    income={income}
-                    debts={debts}
-                    month={new Date().getMonth()}
-                />
-
-                {/* Cashflow Settings Toggle */}
+                {/* ActionPlanPanel used to be here */}      {/* Cashflow Settings Toggle */}
                 <div className="mb-4 flex items-center justify-between bg-surface rounded-lg border border-surface-highlight p-4 shadow-sm">
                     <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-white">
