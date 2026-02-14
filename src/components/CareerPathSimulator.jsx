@@ -206,7 +206,7 @@ const AIAdvisor = ({ outcomes, activeScenarioId, baselineId }) => {
 
 
 // Internal Component: Strategic Assessment
-const StrategicAssessment = ({ offer, outcome }) => {
+function StrategicAssessment({ offer, outcome }) {
     const { label, reasons } = outcome.verdict || { label: 'Analyzing...', reasons: [] };
 
     return (
