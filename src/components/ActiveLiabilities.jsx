@@ -1,14 +1,38 @@
 import React, { useState, useMemo } from "react";
-import { Wallet, Car, AlertCircle, TrendingUp, AlertTriangle, ArrowRight, Info, CheckCircle } from "lucide-react";
+import { Wallet, Car, AlertCircle, TrendingUp, AlertTriangle, ArrowRight, Info, CheckCircle, Edit2 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
 import { getRateWarnings, calculatePayoffStrategy, getCurrentRate, deriveDebtStatus, calculateEffectiveRateState } from "../utils/PayoffEngine";
 import kiaImage from "../assets/kia_sportage.png";
 import Tooltip from "./Tooltip";
 import { PageContainer } from "./common/PageContainer";
 import { GlassCard } from "./common/GlassCard";
+import { useData } from "../contexts/DataProvider";
 
 export default function ActiveLiabilities({ debts, onUpdateDebts, advancedSettings }) {
     const [strategy, setStrategy] = useState('AVALANCHE'); // AVALANCHE or SNOWBALL
+    const { isSandbox, updateData } = useData();
+
+    // Sandbox Edit Handlers
+    const handleEditBalance = (debt) => {
+        if (!isSandbox) return;
+        const newBal = prompt(`Update Balance for ${debt.name}:`, debt.currentBalance);
+        if (newBal !== null && !isNaN(newBal)) {
+            const updatedDebts = debts.map(d => d.id === debt.id ? { ...d, currentBalance: parseFloat(newBal) } : d);
+            onUpdateDebts(updatedDebts); // Propagate up
+
+            // Also ensure global data update if needed, but onUpdateDebts should handle it via parent
+        }
+    };
+
+    const handleEditRate = (debt) => {
+        if (!isSandbox) return;
+        const newRate = prompt(`Update Interest Rate for ${debt.name} (%):`, debt.interestRate);
+        if (newRate !== null && !isNaN(newRate)) {
+            const updatedDebts = debts.map(d => d.id === debt.id ? { ...d, interestRate: parseFloat(newRate) } : d);
+            onUpdateDebts(updatedDebts);
+        }
+    };
+
 
     // 1. Calculations
     const totalDebt = debts.reduce((acc, debt) => acc + debt.currentBalance, 0);
@@ -281,8 +305,15 @@ export default function ActiveLiabilities({ debts, onUpdateDebts, advancedSettin
                                             </ResponsiveContainer>
                                         </div>
 
-                                        <div className="flex justify-between text-sm mb-1 mt-2">
-                                            <span className="text-gray-500 dark:text-gray-400">Current Balance</span>
+                                        <div
+                                            className={`flex justify-between text-sm mb-1 mt-2  ${isSandbox ? 'cursor-pointer hover:bg-white/10 p-1 -m-1 rounded' : ''}`}
+                                            onClick={() => handleEditBalance(debt)}
+                                            title={isSandbox ? "Click to Edit Balance" : ""}
+                                        >
+                                            <span className="text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                                Current Balance
+                                                {isSandbox && <Edit2 className="w-3 h-3 text-gray-600" />}
+                                            </span>
                                             <span className="font-semibold text-white">${debt.currentBalance.toLocaleString()}</span>
                                         </div>
 
@@ -307,9 +338,14 @@ export default function ActiveLiabilities({ debts, onUpdateDebts, advancedSettin
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="text-right flex flex-col items-end">
-                                                    <span className={`text-xs font-bold ${highCostDebtFlag ? 'text-red-500 dark:text-red-400' : 'text-emerald-500 dark:text-emerald-400'}`}>
+                                                <div
+                                                    className={`text-right flex flex-col items-end ${isSandbox ? 'cursor-pointer hover:bg-white/10 p-1 -m-1 rounded' : ''}`}
+                                                    onClick={() => handleEditRate(debt)}
+                                                    title={isSandbox ? "Click to Edit Rate" : ""}
+                                                >
+                                                    <span className={`text-xs font-bold flex items-center gap-1 ${highCostDebtFlag ? 'text-red-500 dark:text-red-400' : 'text-emerald-500 dark:text-emerald-400'}`}>
                                                         {effectiveRatePct}%
+                                                        {isSandbox && <Edit2 className="w-2 h-2 opacity-50" />}
                                                     </span>
                                                     {highCostDebtFlag && (
                                                         <div className="text-[10px] text-red-400 font-medium">High Cost Debt</div>

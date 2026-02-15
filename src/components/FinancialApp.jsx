@@ -17,6 +17,7 @@ import DebtRiskBanner from "./DebtRiskBanner";
 import InterestRiskPanel from "./InterestRiskPanel";
 
 import SubscriptionIntelligence from "./SubscriptionIntelligence";
+import LifeSimulator from "./LifeSimulator/LifeSimulator";
 import WealthTrajectory from "./WealthTrajectory";
 import RelocationCommandCenter from "./RelocationCommandCenter";
 import OverviewV2 from "./OverviewV2";
@@ -1336,7 +1337,13 @@ export default function FinancialApp() {
             );
         }
 
-
+        if (currentTab === "life_simulator") {
+            return (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <LifeSimulator />
+                </div>
+            );
+        }
 
         if (currentTab === "subscriptions") {
             return (

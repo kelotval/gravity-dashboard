@@ -1,5 +1,5 @@
 import React from "react";
-import { LayoutDashboard, CreditCard, PieChart, Settings, Menu, Wallet, Moon, Sun, Calendar, LineChart, Sparkles, Globe, LogOut } from "lucide-react";
+import { LayoutDashboard, CreditCard, PieChart, Settings, Menu, Wallet, Moon, Sun, Calendar, LineChart, Sparkles, Globe, LogOut, Activity } from "lucide-react";
 import clsx from "clsx";
 import SyncIndicator from "./SyncIndicator";
 import ModeToggle, { ModeBanner } from "./ModeToggle";
@@ -37,6 +37,7 @@ export default function DashboardLayout({ children, currentTab, onTabChange, syn
         {
             title: "Tools",
             items: [
+                { id: "life_simulator", icon: Activity, label: "Life Simulator" },
                 { id: "relocation", icon: Globe, label: "Relocation" },
                 { id: "insights", icon: Sparkles, label: "AI Insights" },
                 { id: "settings", icon: Settings, label: "Settings" },

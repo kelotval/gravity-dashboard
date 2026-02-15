@@ -134,16 +134,35 @@ export const deriveDebtStatus = (debt) => {
     let statusChip = "On Track";
     let statusLevel = "low";
 
-    if (daysToChange <= 0) {
-        statusChip = "🔴 Active High Interest";
-        statusLevel = "critical";
-    } else if (daysToChange <= 30) {
-        statusChip = "🟠 High Risk";
-        statusLevel = "high";
-    } else if (daysToChange <= 60) {
-        statusChip = "🟡 Upcoming Risk";
-        statusLevel = "medium";
+    // Dynamic Risk Logic Rules
+    // 1. High Interest Rate (> 18%)
+    const currentRate = debt.interestRate || 0;
+    if (currentRate > 18) {
+        statusChip = "High Interest Risk";
+        statusLevel = "high"; // Red
     }
+
+    // 2. Promo Expiry Logic (0% ending soon)
+    if (daysToChange !== null) {
+        if (daysToChange <= 0) {
+            statusChip = "Rate Expired";
+            statusLevel = "critical";
+        } else if (daysToChange <= 30) {
+            statusChip = "Rate Hike Imminent";
+            statusLevel = "critical";
+        } else if (daysToChange <= 180 && currentRate === 0) {
+            // "If interestRate === 0 AND promoEndDate < 6 months away -> riskLevel = upcoming-risk"
+            statusChip = "Promo Ending Soon";
+            statusLevel = "medium"; // Orange
+        } else if (daysToChange <= 60) {
+            statusChip = "Upcoming Rate Change";
+            statusLevel = "medium";
+        }
+    }
+
+    // Override if explicitly set in data (Sandbox safe)
+    if (debt.riskLevel === 'high') statusLevel = 'high';
+    if (debt.riskLevel === 'upcoming-risk') statusLevel = 'medium';
 
     return {
         statusChip,

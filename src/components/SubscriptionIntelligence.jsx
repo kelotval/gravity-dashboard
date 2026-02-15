@@ -207,7 +207,10 @@ export default function SubscriptionIntelligence({ transactions = [], debts = []
     // This needs to know the "Monthly Average Cost" of checked items, regardless of view
     // We need a helper to get average cost of ANY merchant
     const getAverageCost = (merchantName) => {
-        const txs = allSubTransactions.filter(t => (t.description || "Unknown") === merchantName);
+        const txs = allSubTransactions.filter(t => {
+            const rawName = t.description || t.item || t.category || "Unknown";
+            return normalizeMerchantName(rawName) === merchantName;
+        });
         if (!txs.length) return 0;
         const total = txs.reduce((sum, t) => sum + Math.abs(t.amount), 0);
         return total / Math.max(1, txs.length); // Simplified avg
