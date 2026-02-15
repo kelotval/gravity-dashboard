@@ -130,13 +130,14 @@ export default function TransactionsView({
                         <select
                             value={activePeriodKey}
                             onChange={(e) => setActivePeriodKey(e.target.value)}
+                            style={{ colorScheme: "dark" }}
                             className="appearance-none bg-white/5 border border-white/10 text-white pl-4 pr-10 py-2 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm transition-colors cursor-pointer"
                         >
                             {availablePeriods.map(m => (
-                                <option key={m} value={m}>{m} {m === new Date().toISOString().substring(0, 7) ? '(Current)' : ''}</option>
+                                <option key={m} value={m} className="bg-gray-900 text-white">{m} {m === new Date().toISOString().substring(0, 7) ? '(Current)' : ''}</option>
                             ))}
                             {!availablePeriods.includes(activePeriodKey) && activePeriodKey && (
-                                <option value={activePeriodKey}>{activePeriodKey}</option>
+                                <option value={activePeriodKey} className="bg-gray-900 text-white">{activePeriodKey}</option>
                             )}
                         </select>
                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
@@ -152,11 +153,12 @@ export default function TransactionsView({
                         <select
                             value={sourceFilter}
                             onChange={(e) => setSourceFilter(e.target.value)}
+                            style={{ colorScheme: "dark" }}
                             className="appearance-none bg-white/5 border border-white/10 text-white pl-3 pr-8 py-2 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm transition-colors cursor-pointer"
                         >
-                            <option value="all">All Sources</option>
-                            <option value="amex">Amex Only</option>
-                            <option value="manual">Manual Only</option>
+                            <option value="all" className="bg-gray-900 text-white">All Sources</option>
+                            <option value="amex" className="bg-gray-900 text-white">Amex Only</option>
+                            <option value="manual" className="bg-gray-900 text-white">Manual Only</option>
                         </select>
                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
                             <Filter className="w-3 h-3" />

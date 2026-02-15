@@ -44,11 +44,12 @@ export default function CategorySelector({
                 <select
                     value={value || ""}
                     onChange={e => onChange(e.target.value)}
+                    style={{ colorScheme: "dark" }}
                     className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 >
-                    <option value="">Select category...</option>
+                    <option value="" className="dark:bg-gray-800">Select category...</option>
                     {categories.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
+                        <option key={cat} value={cat} className="dark:bg-gray-800">{cat}</option>
                     ))}
                 </select>
             </div>

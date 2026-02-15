@@ -275,12 +275,13 @@ export default function AmexCsvImport({ onImport }) {
           <select
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
+            style={{ colorScheme: "dark" }}
             className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 text-sm focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
             disabled={!!parsedData}
           >
-            <option value="">Select statement month...</option>
+            <option value="" className="dark:bg-gray-800">Select statement month...</option>
             {availablePeriods.map((p) => (
-              <option key={p} value={p}>
+              <option key={p} value={p} className="dark:bg-gray-800">
                 {p}
               </option>
             ))}

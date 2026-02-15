@@ -268,14 +268,15 @@ export default function SubscriptionIntelligence({ transactions = [], debts = []
                 <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
+                    style={{ colorScheme: "dark" }}
                     className="bg-transparent border-none text-xs font-medium text-content-primary focus:ring-0 cursor-pointer py-1.5 pl-2 pr-8 outline-none"
                 >
-                    <option value="cost-desc" className="bg-surface">Highest Cost</option>
-                    <option value="cost-asc" className="bg-surface">Lowest Cost</option>
-                    <option value="activity-desc" className="bg-surface">Most Frequent</option>
-                    <option value="activity-asc" className="bg-surface">Least Frequent</option>
-                    <option value="recent-desc" className="bg-surface">Recent Activity</option>
-                    <option value="name-asc" className="bg-surface">Name: A-Z</option>
+                    <option value="cost-desc" className="bg-gray-900 text-white">Highest Cost</option>
+                    <option value="cost-asc" className="bg-gray-900 text-white">Lowest Cost</option>
+                    <option value="activity-desc" className="bg-gray-900 text-white">Most Frequent</option>
+                    <option value="activity-asc" className="bg-gray-900 text-white">Least Frequent</option>
+                    <option value="recent-desc" className="bg-gray-900 text-white">Recent Activity</option>
+                    <option value="name-asc" className="bg-gray-900 text-white">Name: A-Z</option>
                 </select>
             </div>
 
@@ -285,12 +286,13 @@ export default function SubscriptionIntelligence({ transactions = [], debts = []
                 <select
                     value={selectedMonth}
                     onChange={(e) => setSelectedMonth(e.target.value)}
+                    style={{ colorScheme: "dark" }}
                     className="bg-transparent border-none text-xs font-medium text-content-primary focus:ring-0 cursor-pointer py-1.5 pl-2 pr-8 outline-none"
                 >
-                    <option value="all" className="bg-surface">All Time (Average)</option>
-                    <option disabled className="bg-surface">──────────</option>
+                    <option value="all" className="bg-gray-900 text-white">All Time (Average)</option>
+                    <option disabled className="bg-gray-900 text-white">──────────</option>
                     {availableMonths.map(m => (
-                        <option key={m} value={m} className="bg-surface">
+                        <option key={m} value={m} className="bg-gray-900 text-white">
                             {new Date(m + "-01").toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                         </option>
                     ))}

@@ -93,6 +93,32 @@ input[type=number]::-webkit-outer-spin-button {
   margin: 0;
 }
 
+/* --- GLOBAL FORM STYLES --- */
+
+/* Fix for White Dropdowns on Windows/Chrome */
+select {
+  color-scheme: dark !important;
+}
+
+select option {
+  background-color: var(--surface-elevated) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Ensure empty options are also dark */
+select:empty {
+  background-color: var(--surface-elevated);
+}
+
+/* Autofill Dark Mode Fix */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px #18181B inset !important;
+  -webkit-text-fill-color: white !important;
+}
+
 /* --- ANIMATIONS --- */
 @keyframes fadeInUp {
   from {

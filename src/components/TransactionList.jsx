@@ -260,11 +260,12 @@ export default function TransactionList({ transactions, onDelete, onEdit, groupB
                         <select
                             value={sourceFilter}
                             onChange={(e) => setSourceFilter(e.target.value)}
+                            style={{ colorScheme: "dark" }}
                             className="pl-9 pr-8 py-2 text-sm border border-white/10 rounded-lg bg-surface text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all appearance-none"
                         >
-                            <option value="all">All Sources</option>
-                            <option value="amex">Amex Only</option>
-                            <option value="manual">Manual Only</option>
+                            <option value="all" className="bg-gray-900 text-white">All Sources</option>
+                            <option value="amex" className="bg-gray-900 text-white">Amex Only</option>
+                            <option value="manual" className="bg-gray-900 text-white">Manual Only</option>
                         </select>
                     </div>
                 </div>
