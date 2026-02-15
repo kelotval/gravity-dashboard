@@ -3,10 +3,10 @@ import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, Pola
 import { GlassCard } from '../common/GlassCard';
 import { useRiskMetrics } from './useRiskMetrics';
 
-export default function RiskRadarChart({ transactions, income, debts, profile }) {
+export default function RiskRadarChart({ transactions, income, debts, profile, monthlyLedger, activePeriodKey, simulatorState }) {
 
     // Calculate Real Metrics
-    const { data, totalScore } = useRiskMetrics(transactions, income, debts, profile);
+    const { data, totalScore } = useRiskMetrics(transactions, income, debts, profile, monthlyLedger, activePeriodKey, simulatorState);
 
     return (
         <section className="h-full flex flex-col">

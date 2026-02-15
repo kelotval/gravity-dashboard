@@ -62,6 +62,9 @@ export default function FinancialCommandCenter({
                             income={income}
                             debts={debts}
                             profile={profile}
+                            monthlyLedger={monthlyLedger}
+                            activePeriodKey={activePeriodKey}
+                            simulatorState={simulatorState}
                         />
                     </div>
                 </div>
