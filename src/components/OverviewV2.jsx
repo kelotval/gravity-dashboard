@@ -151,20 +151,20 @@ const CompactDebtCard = ({ debt }) => (
         <div>
             <div className="flex items-center gap-2 mb-1">
                 <span className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors">{debt.name}</span>
-                {debt.isHighInterest && (
+                {(debt.isHighInterest || debt.highCostDebtFlag) && (
                     <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50" title="High Interest" />
                 )}
             </div>
             <div className="text-xs text-gray-500">
-                {debt.rate}% APR • ${debt.minPayment}/mo
+                {debt.interestRate}% APR • ${debt.monthlyRepayment}/mo
             </div>
             <div className="text-[10px] text-gray-600 mt-1 uppercase tracking-wider font-medium">
                 {debt.debtType || 'Loan'} • {debt.dueLabel || 'Monthly'}
             </div>
         </div>
         <div className="text-right">
-            <div className="text-sm font-medium text-white">${(debt.balance || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-            <div className="text-xs text-gray-500">{debt.payoffDate}</div>
+            <div className="text-sm font-medium text-white">${(debt.currentBalance || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+            {debt.payoffDate && <div className="text-xs text-gray-500">{debt.payoffDate}</div>}
         </div>
     </div>
 );
@@ -188,7 +188,7 @@ export default function OverviewV2({
 
     useEffect(() => {
         setAnimate(true);
-    }, []);
+    }, [debts]);
 
     const chartData = incomeExpenseData && incomeExpenseData.length > 0
         ? incomeExpenseData.slice(-6)

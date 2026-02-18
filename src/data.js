@@ -39,8 +39,9 @@ export const DEFAULT_STATE = {
             interestRate: 9.99,
             debtType: "Credit Card",
             promoTemporary: true,
-            futureRatePct: 21.99, // Pending user date entry
-            promoEndDate: null,
+            futureRatePct: 21.99,
+            promoEndDate: "2026-06-01", // Future date for Savings Ops
+            futureRates: [{ date: "2026-06-01", rate: 21.99 }], // Explicit future rate
             riskFlag: "Large Rate Jump"
         },
         {
@@ -54,6 +55,8 @@ export const DEFAULT_STATE = {
             originalBalance: 6000,
             interestRate: 12.5,
             debtType: "Personal Loan",
+            promoEndDate: "2026-05-01", // Hike in May
+            futureRates: [{ date: "2026-05-01", rate: 14.5 }], // Simulated hike
             promoTemporary: false,
             fastPayoffMode: true,
             strategyHint: "Lower priority due to aggressive repayment"

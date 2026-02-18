@@ -53,7 +53,8 @@ export const DEMO_STATE = {
             originalBalance: 5000,
             currentBalance: 4500,
             interestRate: 0,
-            promoEndDate: "2026-12-01", // Future date
+            promoEndDate: "2026-06-01", // Moved closer for visibility
+            futureRates: [{ date: "2026-06-01", rate: 21.99 }],
             monthlyRepayment: 300,
             riskLevel: "upcoming-risk",
             accent: "orange",

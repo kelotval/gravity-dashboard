@@ -326,7 +326,7 @@ export default function FinancialApp() {
     const {
         transactions = [],
         income = DEFAULT_STATE.income,
-        debts = [],
+        debts: rawDebts = DEFAULT_STATE.debts,
         profile = DEFAULT_STATE.profile,
         advancedSettings = ((data && data.advancedSettings) ? data.advancedSettings : DEFAULT_STATE.advancedSettings) || {},
         categoryRules = DEFAULT_CATEGORY_RULES,
@@ -338,6 +338,9 @@ export default function FinancialApp() {
     } = data || DEFAULT_STATE;
 
     // Loading State
+
+    // --- Fallback Logic: Ensure Debts are populated (fix for empty array issue) ---
+    const debts = (rawDebts && rawDebts.length > 0) ? rawDebts : DEFAULT_STATE.debts;
 
 
     // --- State Setters Shims (Compatibility Layer) ---
@@ -406,6 +409,61 @@ export default function FinancialApp() {
             setTransactions(fixedTransactions);
         }
     }, [transactions]); // Safe: second run will find updatedCount = 0
+
+    // --- Data Migration: Fix Kogan Debt (Run once) ---
+    useEffect(() => {
+        if (!debts || debts.length === 0) return;
+
+        const koganIndex = debts.findIndex(d => d.id === 'kogan');
+        if (koganIndex === -1 && debts.findIndex(d => d.id === 'bankwest') === -1) return;
+
+        let shouldUpdate = false;
+        const updatedDebts = [...debts];
+
+        const koganDebt = debts[koganIndex];
+
+        // Check if migration needed: has it got futureRates? OR is promoEndDate missing?
+        if (koganIndex !== -1) {
+            const koganDebt = debts[koganIndex];
+
+            // Check if migration needed: has it got futureRates? OR is promoEndDate missing?
+            // The user might have futureRates but no promoEndDate (e.g. from an old partial update), which breaks the logic.
+            const needsFix = !koganDebt.futureRates || koganDebt.futureRates.length === 0 || !koganDebt.promoEndDate;
+
+            if (needsFix) {
+                console.log("Migrating Kogan Debt: Fixing missing promoEndDate / futureRates...");
+
+                updatedDebts[koganIndex] = {
+                    ...koganDebt,
+                    promoEndDate: "2026-06-01",
+                    futureRates: [{ date: "2026-06-01", rate: 21.99 }], // Explicit future rate
+                    riskFlag: "Large Rate Jump"
+                };
+                shouldUpdate = true;
+            }
+        }
+
+        // --- Migration for Bankwest (User Request: Hike in May) ---
+        const bankwestIndex = debts.findIndex(d => d.id === 'bankwest');
+        if (bankwestIndex !== -1) {
+            const bankwest = debts[bankwestIndex];
+            // Check if missing future rates
+            if (!bankwest.futureRates || bankwest.futureRates.length === 0) {
+                console.log("Migrating Bankwest Debt: Adding May Rate Hike...");
+                updatedDebts[bankwestIndex] = {
+                    ...bankwest,
+                    promoEndDate: "2026-05-01",
+                    futureRates: [{ date: "2026-05-01", rate: 14.5 }],
+                    riskFlag: "Rate Hike"
+                };
+                shouldUpdate = true;
+            }
+        }
+
+        if (shouldUpdate) {
+            setDebts(updatedDebts);
+        }
+    }, [debts]);
 
 
 
@@ -1274,7 +1332,8 @@ export default function FinancialApp() {
                     incomeExpenseData={incomeExpenseData}
                     categoryData={categoryData}
                     transactions={activeTransactionsAll}
-                    plannedIncome={activePlannedIncome}
+                    allTransactions={transactions} // Pass full history for insights
+                    plannedIncome={totalIncome}
                 />
             );
         }

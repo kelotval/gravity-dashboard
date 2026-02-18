@@ -2,7 +2,7 @@ import { TrendingUp, DollarSign, AlertTriangle, ArrowRight, PiggyBank } from 'lu
 import { SurfaceCard } from './common/SurfaceCard';
 import Tooltip from './Tooltip';
 
-export default function InterestRiskPanel({ projections, savingsOpportunities, worstOffender }) {
+export default function InterestRiskPanel({ projections, savingsOpportunities, worstOffender, debts }) {
     if (!projections) return null;
 
     return (
@@ -111,8 +111,8 @@ export default function InterestRiskPanel({ projections, savingsOpportunities, w
                     )}
                 </div>
                 {savingsOpportunities.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-white/5 text-xs text-center text-emerald-400/80 font-medium cursor-pointer hover:text-emerald-400 transition-colors flex items-center justify-center gap-1 group">
-                        View details in Payoff Plan <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                    <div className="mt-4 pt-4 border-t border-white/5 text-xs text-center text-gray-500 font-medium">
+                        Consider allocating extra cash to these first.
                     </div>
                 )}
             </SurfaceCard>

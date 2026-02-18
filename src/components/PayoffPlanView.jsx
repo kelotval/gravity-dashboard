@@ -183,6 +183,7 @@ export default function PayoffPlanView({ debts, advancedSettings, onUpdateDebts 
             <div className="animate-fade-in-up delay-100">
                 <InterestRiskPanel
                     {...calculateInterestProjections(debts)}
+                    debts={debts}
                 />
             </div>
 

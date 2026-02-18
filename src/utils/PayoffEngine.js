@@ -181,6 +181,8 @@ export const calculateEffectiveRateState = (debt) => {
         effectiveChangeDate = new Date(debt.promoEndDate);
     } else if (debt.rateChangeEffectiveDate) {
         effectiveChangeDate = new Date(debt.rateChangeEffectiveDate);
+    } else if (debt.futureRates && debt.futureRates.length > 0 && debt.futureRates[0].date) {
+        effectiveChangeDate = new Date(debt.futureRates[0].date);
     }
 
     let effectiveRatePct = debt.interestRate || 0;
@@ -256,6 +258,9 @@ export const getDebtRiskBanners = (debts) => {
             let effectiveChangeDate = null;
             if (debt.promoEndDate) effectiveChangeDate = new Date(debt.promoEndDate);
             else if (debt.rateChangeEffectiveDate) effectiveChangeDate = new Date(debt.rateChangeEffectiveDate);
+            else if (debt.futureRates && debt.futureRates.length > 0 && debt.futureRates[0].date) {
+                effectiveChangeDate = new Date(debt.futureRates[0].date);
+            }
 
             if (effectiveChangeDate) effectiveChangeDate.setHours(0, 0, 0, 0);
 
@@ -550,6 +555,9 @@ export const calculateInterestProjections = (debts) => {
         let effectiveChangeDate = null;
         if (debt.promoEndDate) effectiveChangeDate = new Date(debt.promoEndDate);
         else if (debt.rateChangeEffectiveDate) effectiveChangeDate = new Date(debt.rateChangeEffectiveDate);
+        else if (debt.futureRates && debt.futureRates.length > 0 && debt.futureRates[0].date) {
+            effectiveChangeDate = new Date(debt.futureRates[0].date);
+        }
 
         if (effectiveChangeDate && effectiveChangeDate > today && debt.futureRates && debt.futureRates.length > 0) {
             const futureRate = debt.futureRates[0].rate;
@@ -593,6 +601,9 @@ export const calculateInterestProjections = (debts) => {
         let effectiveChangeDateDelay = null;
         if (debt.promoEndDate) effectiveChangeDateDelay = new Date(debt.promoEndDate);
         else if (debt.rateChangeEffectiveDate) effectiveChangeDateDelay = new Date(debt.rateChangeEffectiveDate);
+        else if (debt.futureRates && debt.futureRates.length > 0 && debt.futureRates[0].date) {
+            effectiveChangeDateDelay = new Date(debt.futureRates[0].date);
+        }
         if (effectiveChangeDateDelay) effectiveChangeDateDelay.setHours(0, 0, 0, 0);
 
         if (effectiveChangeDateDelay && today < effectiveChangeDateDelay && debt.futureRates?.length > 0) {

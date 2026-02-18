@@ -3,7 +3,7 @@ import { PageContainer } from './common/PageContainer';
 import { IncomeExpenseChart, CategoryPieChart } from './FinanceChart';
 import SpendingIntelligence from './SpendingIntelligence';
 
-export default function AnalyticsView({ incomeExpenseData, categoryData, transactions, plannedIncome }) {
+export default function AnalyticsView({ incomeExpenseData, categoryData, transactions, allTransactions, plannedIncome }) {
     return (
         <PageContainer
             title="Analytics"
@@ -19,7 +19,7 @@ export default function AnalyticsView({ incomeExpenseData, categoryData, transac
 
             {/* Spending Intelligence (Category Trends & Insights) */}
             <div className="mt-6">
-                <SpendingIntelligence transactions={transactions} />
+                <SpendingIntelligence transactions={(allTransactions && allTransactions.length > 0) ? allTransactions : transactions} />
             </div>
         </PageContainer>
     );
